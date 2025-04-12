@@ -6,6 +6,8 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 import random
 import time
 
+# Code of the article: https://proceedings.neurips.cc/paper_files/paper/2023/file/16bce4070c4e23434451b180348e3814-Paper-Conference.pdf
+
 class HccLinkage():
 
     def __init__(self, d, alt = False, rand = False, tol = 1e-5):

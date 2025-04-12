@@ -1,85 +1,19 @@
 from tqdm import tqdm
 import torch
-import torch.optim as optim
-import torch.nn as nn
 
-
-def logsumexp(x: torch.Tensor, dim: int) -> torch.Tensor:
-    # Tricks here: log(sum(exp(x))) = log(sum(exp(x - m)*exp(m))) = log(exp(m)*sum(exp(x - m))) = m + log(sum(exp(x - m)))
-
-    m, _ = x.max(dim=dim)
-    mask = m == -float('inf')
-    s = (x - m.masked_fill_(mask, 0).unsqueeze(dim=dim)).exp().sum(dim=dim)
-
-    return s.masked_fill_(mask, 1).log() + m.masked_fill_(mask, -float('inf'))
-
-def soft_max(points: torch.Tensor,  scale: float, dim=-1) -> torch.Tensor:
-    """
-    Computes the log-sum-exp with a scaling factor.
-    """
-    if scale == 0:
-        raise ValueError("scale must be non-zero.")
-
-    return (1/scale) * torch.logsumexp(scale * points, dim=dim)
-
-##---------------\delta-hyperbolicity related methods
-
-def filter_farapart_memory_inefficient(metric):
-# memory inefficient but rapid if you can !
-    N = metric.shape[0]
-    # Create index grids
-    u_idx, v_idx, w_idx = torch.meshgrid(torch.arange(N), torch.arange(N), torch.arange(N), indexing="ij")
-    # Conditions
-    cond1 = metric[w_idx, u_idx] + metric[u_idx, v_idx] > metric[w_idx, v_idx]
-    cond2 = metric[w_idx, v_idx] + metric[u_idx, v_idx] > metric[w_idx, u_idx]
-    # Ensure w ≠ u and w ≠ v
-    valid_w = (w_idx != u_idx) & (w_idx != v_idx)
-    # Apply conditions only for valid w
-    Fpart = torch.all(cond1 & cond2 | ~valid_w, dim=2)
-
-    ind = Fpart.tril(diagonal=0).nonzero()
-    return torch.where(Fpart.any(dim=1))[0], ind
-
-def filter_farapart(metric):
-    N = metric.shape[0]
-    Fpart = torch.ones((N, N), dtype=torch.bool, device=metric.device)  # Initialize to True
-
-    # Precompute u_idx and v_idx once (saves memory & computation)
-    u_idx, v_idx = torch.meshgrid(torch.arange(N), torch.arange(N), indexing="ij")
-    u_idx = u_idx.to(metric.device)
-    v_idx = v_idx.to(metric.device)
-
-    # Loop over w instead of creating (N, N, N) tensors
-    for w in range(N):
-        # Conditions
-        cond1 = metric[w, u_idx] + metric[u_idx, v_idx] > metric[w, v_idx]
-        cond2 = metric[w, v_idx] + metric[u_idx, v_idx] > metric[w, u_idx]
-
-        # Ignore w == u or w == v
-        valid_w = (w != u_idx) & (w != v_idx)
-
-        # Update Fpart using element-wise AND
-        Fpart &= cond1 & cond2 | ~valid_w
-
-    # Extract indices efficiently
-    ind = Fpart.tril(diagonal=0).nonzero()
-    return torch.where(Fpart.any(dim=1))[0], ind
-
-def filter_farapart_memory_efficient(metric):
-    N = metric.shape[0]
-    Fpart = torch.ones((N, N), dtype=torch.bool)  # Initialize to True
-
-    for u in range(N):
-        for v in range(N):
-            for w in range(N):
-                if  (w != u) and (w != v):
-                    if not(metric[w,u] + metric[u,v] > metric[w,v]) or not(metric[w,v] + metric[u,v] > metric[w,u]):
-                        Fpart[u,v]=0
-    ind = Fpart.tril(diagonal=0).nonzero()
-    return torch.where(Fpart.any(dim=1))[0], ind
 
 def compute_hyperbolicity(M,scale=0):
-        # Compute S1, S2, S3 for all combinations (i, j, k, l)
+    """
+    Computes the Gromov delta-hyperbolicity of a metric space using the 4-point condition.
+
+    Parameters:
+        M (torch.Tensor): A (N x N) distance matrix (assumed to be symmetric).
+        scale (float): If non-zero, uses a smooth soft-max approximation instead of hard max.
+
+    Returns:
+        torch.Tensor: Scalar value representing the delta-hyperbolicity.
+    """
+    # Compute S1, S2, S3 for all combinations (i, j, k, l)
     S1 = M.unsqueeze(2).unsqueeze(3) + M.unsqueeze(0).unsqueeze(1)
     S2 = M.unsqueeze(1).unsqueeze(3) + M.unsqueeze(0).unsqueeze(2)
     S3 = M.unsqueeze(1).unsqueeze(2) + M.unsqueeze(0).unsqueeze(3)
@@ -92,11 +26,22 @@ def compute_hyperbolicity(M,scale=0):
     delta = (Stot_sorted[..., 0] - Stot_sorted[..., 1]) / 2
     # Find the maximum value of delta
     if scale:
-        return soft_max(delta,scale,dim=(0,1,2,3))
+        return soft_max(delta, scale, dim=(0,1,2,3))
     else:
         return torch.max(delta)
-
+    
 def make_batches(M, size_batches=10, nb_batches=1):
+    """
+    Samples random submatrices from a given distance matrix for batched hyperbolicity estimation.
+
+    Parameters:
+        M (torch.Tensor): A (N x N) distance matrix.
+        size_batches (int): Number of points in each batch (submatrix size).
+        nb_batches (int): Number of batches to sample.
+
+    Returns:
+        torch.Tensor: A tensor of shape (nb_batches, size_batches, size_batches) containing sampled submatrices.
+    """
     N = M.size(0)
     all_indices = torch.arange(N).to(M.device)
     batches = []
@@ -110,9 +55,20 @@ def make_batches(M, size_batches=10, nb_batches=1):
         # Add the submatrix to the list of batches
         batches.append(submatrix)
     # Stack the list of batches into a single tensor
+
     return torch.stack(batches)
 
 def compute_hyperbolicity_batch(M_batch, scale=0):
+    """
+    Computes delta-hyperbolicity over a batch of distance matrices using the 4-point condition.
+
+    Parameters:
+        M_batch (torch.Tensor): A batch of distance matrices (B x N x N).
+        scale (float): If non-zero, uses a soft-max approximation over the computed deltas.
+
+    Returns:
+        torch.Tensor: Tensor of shape (B,) with one hyperbolicity value per batch matrix.
+    """
     # Compute S1, S2, S3 for all combinations (i, j, k, l) across the batch
     S1 = M_batch.unsqueeze(3).unsqueeze(4) + M_batch.unsqueeze(1).unsqueeze(2)
     S2 = M_batch.unsqueeze(2).unsqueeze(4) + M_batch.unsqueeze(1).unsqueeze(3)
@@ -132,6 +88,16 @@ def compute_hyperbolicity_batch(M_batch, scale=0):
         return torch.max(delta, dim=(1, 2, 3, 4))
 
 def compute_exact_hyperbolicity_naive(metric):
+    """
+    Computes the exact delta-hyperbolicity using the 4-point condition via brute-force enumeration.
+
+    Parameters:
+        metric (torch.Tensor): A (N x N) distance matrix.
+
+    Returns:
+        torch.Tensor: Scalar tensor representing the exact hyperbolicity.
+    """
+
     N = metric.shape[0]
     maxi=torch.tensor([0], device=metric.device)
     for i in range(N):
@@ -147,6 +113,17 @@ def compute_exact_hyperbolicity_naive(metric):
     return maxi
 
 def compute_hyperbolicity_from_pairs(metric, ind, scale=0):
+    """
+    Computes the delta-hyperbolicity over a selected set of index pairs.
+
+    Parameters:
+        metric (torch.Tensor): A (N x N) distance matrix.
+        ind (torch.Tensor): A (P x 2) tensor of index pairs (i, j).
+        scale (float): If non-zero, uses a soft-max approximation over delta values.
+
+    Returns:
+        torch.Tensor: Scalar tensor representing the (approximate) hyperbolicity over selected pairs.
+    """
     # Extract (x, y) index pairs
     x, y = ind[:, 0], ind[:, 1]  # Shape: (P,)
 
@@ -173,19 +150,56 @@ def compute_hyperbolicity_from_pairs(metric, ind, scale=0):
     else:
         return torch.max(K)
 
-def gromov_product_from_distances(metric, i,j,k):
+def gromov_product_from_distances(metric, i, j, k):
+    """
+    Computes the Gromov product between points i and j with respect to base point k.
+
+    Parameters:
+        metric (torch.Tensor): A (N x N) distance matrix.
+        i (int): Index of point i.
+        j (int): Index of point j.
+        k (int): Index of base point k.
+
+    Returns:
+        torch.Tensor: Scalar tensor with the Gromov product (i·j)_k.
+    """
     d_i_k = metric[i, k]
     d_j_k = metric[j, k]
     d_i_j = metric[i, j]
+
     return (d_i_k + d_j_k - d_i_j) / 2
 
-def delta_hyperbolicity_fixed_basepoint(metric,base_point, alpha, soft=True):
+def delta_hyperbolicity_fixed_basepoint(metric, base_point, alpha, soft=True):
+    """
+    Computes a basepoint-dependent notion of delta-hyperbolicity using Gromov products.
+
+    Parameters:
+        metric (torch.Tensor): A (N x N) distance matrix.
+        base_point (int): Index of the base point for computing Gromov products.
+        alpha (float): Smoothing parameter used in log-sum-exp aggregation.
+        soft (bool): Whether to use soft-max aggregation (default: True).
+
+    Returns:
+        torch.Tensor: Scalar value representing the smoothed hyperbolicity estimate.
+    """
     row = metric[base_point,:]
     XX_p = 0.5 * (row.unsqueeze(0) + row.unsqueeze(1) - metric) # could be optimized if base_point is 0
-    # naive  implem
+
     return torch.logsumexp(alpha*(torch.min(XX_p[:, :, None], XX_p[None, :, :])-XX_p[:, None, :]), dim=(0,1,2))/alpha
 
 def delta_hyperbolicity_fixed_basepoint2(metric, base_point, alpha, soft=True):
+    """
+    Alternative version of delta_hyperbolicity_fixed_basepoint with explicit loop for aggregation.
+
+    Parameters:
+        metric (torch.Tensor): A (N x N) distance matrix.
+        base_point (int): Index of the base point for computing Gromov products.
+        alpha (float): Smoothing parameter used in log-sum-exp aggregation.
+        soft (bool): Whether to use soft-max aggregation (default: True).
+
+    Returns:
+        torch.Tensor: Scalar value representing the alternative smoothed hyperbolicity estimate.
+    """
     row = metric[base_point, :]
     N = metric.size(0)
     XX_p = 0.5 * (row.unsqueeze(0) + row.unsqueeze(1) - metric)

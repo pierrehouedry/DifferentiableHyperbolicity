@@ -4,6 +4,8 @@ import networkx as nx
 import random
 import time
 
+# Inspired by:https://github.com/rsonthal/TreeRep
+
 class TreeRep():
     """Class for running the TreeRep Algorithm.
 
