@@ -1,0 +1,5 @@
+setup.py
+hyperbolicity.egg-info/PKG-INFO
+hyperbolicity.egg-info/SOURCES.txt
+hyperbolicity.egg-info/dependency_links.txt
+hyperbolicity.egg-info/top_level.txt

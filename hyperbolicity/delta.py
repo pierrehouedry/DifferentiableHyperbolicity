@@ -1,8 +1,9 @@
 from tqdm import tqdm
 import torch
+from hyperbolicity.utils import soft_max
 
 
-def compute_hyperbolicity(M,scale=0):
+def compute_hyperbolicity(M, scale=0):
     """
     Computes the Gromov delta-hyperbolicity of a metric space using the 4-point condition.
 
@@ -26,10 +27,11 @@ def compute_hyperbolicity(M,scale=0):
     delta = (Stot_sorted[..., 0] - Stot_sorted[..., 1]) / 2
     # Find the maximum value of delta
     if scale:
-        return soft_max(delta, scale, dim=(0,1,2,3))
+        return soft_max(delta, scale, dim=(0, 1, 2, 3))
     else:
         return torch.max(delta)
-    
+
+
 def make_batches(M, size_batches=10, nb_batches=1):
     """
     Samples random submatrices from a given distance matrix for batched hyperbolicity estimation.
@@ -57,6 +59,7 @@ def make_batches(M, size_batches=10, nb_batches=1):
     # Stack the list of batches into a single tensor
 
     return torch.stack(batches)
+
 
 def compute_hyperbolicity_batch(M_batch, scale=0):
     """
@@ -87,6 +90,7 @@ def compute_hyperbolicity_batch(M_batch, scale=0):
     else:
         return torch.max(delta, dim=(1, 2, 3, 4))
 
+
 def compute_exact_hyperbolicity_naive(metric):
     """
     Computes the exact delta-hyperbolicity using the 4-point condition via brute-force enumeration.
@@ -99,18 +103,19 @@ def compute_exact_hyperbolicity_naive(metric):
     """
 
     N = metric.shape[0]
-    maxi=torch.tensor([0], device=metric.device)
+    maxi = torch.tensor([0], device=metric.device)
     for i in range(N):
         for j in range(N):
             for k in range(N):
                 for l in range(N):
-                    S1 = metric[i,j] + metric[k,l]
-                    S2 = metric[i,k] + metric[j,l]
-                    S3 = metric[i,l] + metric[j,k]
-                    Stot = torch.stack([S1, S2,S3], dim=-1)
+                    S1 = metric[i, j] + metric[k, l]
+                    S2 = metric[i, k] + metric[j, l]
+                    S3 = metric[i, l] + metric[j, k]
+                    Stot = torch.stack([S1, S2, S3], dim=-1)
                     Stot = Stot.sort(descending=True)[0]
-                    maxi = torch.max(maxi,(Stot[0]-Stot[1])/2)
+                    maxi = torch.max(maxi, (Stot[0]-Stot[1])/2)
     return maxi
+
 
 def compute_hyperbolicity_from_pairs(metric, ind, scale=0):
     """
@@ -144,11 +149,12 @@ def compute_hyperbolicity_from_pairs(metric, ind, scale=0):
     K = (Stot_sorted[..., 0] - Stot_sorted[..., 1]) / 2  # Shape: (P, P)
 
     # Get the maximum value for each pair
-    #return K.max()
+    # return K.max()
     if scale:
-        return soft_max(K,scale,dim=(0,1))
+        return soft_max(K, scale, dim=(0, 1))
     else:
         return torch.max(K)
+
 
 def gromov_product_from_distances(metric, i, j, k):
     """
@@ -169,6 +175,7 @@ def gromov_product_from_distances(metric, i, j, k):
 
     return (d_i_k + d_j_k - d_i_j) / 2
 
+
 def delta_hyperbolicity_fixed_basepoint(metric, base_point, alpha, soft=True):
     """
     Computes a basepoint-dependent notion of delta-hyperbolicity using Gromov products.
@@ -182,10 +189,11 @@ def delta_hyperbolicity_fixed_basepoint(metric, base_point, alpha, soft=True):
     Returns:
         torch.Tensor: Scalar value representing the smoothed hyperbolicity estimate.
     """
-    row = metric[base_point,:]
-    XX_p = 0.5 * (row.unsqueeze(0) + row.unsqueeze(1) - metric) # could be optimized if base_point is 0
+    row = metric[base_point, :]
+    XX_p = 0.5 * (row.unsqueeze(0) + row.unsqueeze(1) - metric)  # could be optimized if base_point is 0
 
-    return torch.logsumexp(alpha*(torch.min(XX_p[:, :, None], XX_p[None, :, :])-XX_p[:, None, :]), dim=(0,1,2))/alpha
+    return torch.logsumexp(alpha*(torch.min(XX_p[:, :, None], XX_p[None, :, :])-XX_p[:, None, :]), dim=(0, 1, 2))/alpha
+
 
 def delta_hyperbolicity_fixed_basepoint2(metric, base_point, alpha, soft=True):
     """
