@@ -135,4 +135,5 @@ class HccLinkage():
         gp_T = d_max - U.d_U
         self.d_T = np.tile(d_root, (self.n, 1)) + np.tile(d_root.reshape(self.n, 1), (1, self.n)) - 2.0 * gp_T
         np.fill_diagonal(self.d_T, 0)
+        self.G = U.G
 

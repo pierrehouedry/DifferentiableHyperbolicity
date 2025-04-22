@@ -19,25 +19,67 @@ def soft_max(points: torch.Tensor,  scale: float, dim=-1) -> torch.Tensor:
     """
     Computes the log-sum-exp with a scaling factor.
     """
-    if scale == 0:
-        raise ValueError("scale must be non-zero.")
 
     return (1/scale) * torch.logsumexp(scale * points, dim=dim)
 
 
-def datasp(weighted_matrix: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
+def make_batches(M, size_batches=10, nb_batches=1):
+    """
+    Samples random submatrices from a given distance matrix for batched hyperbolicity estimation.
+
+    Parameters:
+        M (torch.Tensor): A (N x N) distance matrix.
+        size_batches (int): Number of points in each batch (submatrix size).
+        nb_batches (int): Number of batches to sample.
+
+    Returns:
+        torch.Tensor: A tensor of shape (nb_batches, size_batches, size_batches) containing sampled submatrices.
+    """
+    N = M.size(0)
+    all_indices = torch.arange(N).to(M.device)
+    batches = []
+    for _ in range(nb_batches):
+        # Shuffle the indices to ensure random selection without replacement
+        shuffled_indices = all_indices[torch.randperm(N)]
+        # Select the first `size_batches` indices to form a submatrix
+        selected_indices = shuffled_indices[:size_batches]
+        # Create the submatrix using the selected indices
+        submatrix = M[selected_indices[:, None], selected_indices]
+        # Add the submatrix to the list of batches
+        batches.append(submatrix)
+    # Stack the list of batches into a single tensor
+
+    return torch.stack(batches)
+
+def datasp(weights: torch.Tensor, num_nodes, edges, beta: float = 1.0) -> torch.Tensor:
     """
     Computes a softened version of shortest path distances using the DataSP algorithm with a temperature parameter beta.
     Inspired by: DataSP: A Differential All-to-All Shortest Path Algorithm for  Learning Costs and Predicting Paths with Context by Alan A. Lahoud, Erik Schaffernicht, and Johannes A. Stork
     """
-    num_nodes = weighted_matrix.shape[0]
-    for k in range(num_nodes):
-        # sum_costs = weighted_matrix[k, :] + weighted_matrix[:, k]
-        sum_costs = weighted_matrix[k:k+1, :] + weighted_matrix[:, k:k+1]
-        weighted_matrix = soft_max(torch.stack([sum_costs, weighted_matrix], dim=-1), -beta)
+    weighted_matrix = construct_weighted_matrix(weights, num_nodes, edges)
 
+    for k in range(num_nodes):
+        for i in range(num_nodes):
+            via_k = weighted_matrix[i, k] + weighted_matrix[k, :]
+            current = weighted_matrix[i, :]            
+            stacked = torch.stack([via_k, current], dim=0)  # shape (2, num_nodes)
+            weighted_matrix[i, :] = soft_max(stacked, -beta, dim=0)
+    
     return weighted_matrix
 
+
+def sample_batch_indices(N: int, size_batches: int = 32, nb_batches: int = 32, device: str = 'cpu') -> list[torch.Tensor]:
+    """
+    Randomly samples node indices to create batches.
+    """
+    all_indices = torch.arange(N, device=device)
+    batches = []
+    for _ in range(nb_batches):
+        permuted = all_indices[torch.randperm(N)]
+        selected = permuted[:size_batches]
+        batches.append(selected)
+
+    return batches
 
 def construct_weighted_matrix(weights: torch.Tensor, num_nodes: int, edges: torch.Tensor) -> torch.Tensor:
     """
@@ -88,3 +130,17 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def soft_min(x: torch.Tensor, scale: float = 1000, dim=-1) -> torch.Tensor:
+    return soft_max(x, scale=-scale, dim=dim) 
+
+def floyd_warshall(adj_matrix):
+
+    N = adj_matrix.size(0)
+    dist = adj_matrix.clone()
+
+    for k in range(N):
+        dist = torch.minimum(dist, dist[:, k].unsqueeze(1) + dist[k, :].unsqueeze(0))
+
+    return dist

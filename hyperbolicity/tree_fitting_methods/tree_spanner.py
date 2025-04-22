@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+from collections import defaultdict
 
 #Inspired by: Additive Spanners and Distance and Routing Labeling Schemes for Hyperbolic Graphs by Victor Chepoi, Feodor F. Dragan2, Bertrand Estellon, Michel Habib, Yann Vaxes, and Yang Xiang
 
