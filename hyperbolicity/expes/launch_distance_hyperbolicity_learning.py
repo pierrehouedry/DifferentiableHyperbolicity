@@ -2,16 +2,17 @@
 import socket
 from time import time
 import argparse
-from hyperbolicity.utils import create_log_dir, setup_logger, str2bool, soft_max, datasp, construct_weighted_matrix
+from hyperbolicity.utils import create_log_dir, setup_logger, str2bool, soft_max, datasp, sample_batch_indices, batched_datasp_submatrices
 import torch
 import torch.optim as optim
 import networkx as nx
 from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import to_networkx
 from tqdm import tqdm
-from hyperbolicity.delta import make_batches, compute_hyperbolicity_batch
+from hyperbolicity.delta import compute_hyperbolicity_batch
 import pickle
 import os
+from timeit import default_timer as timer
 
 
 class ParamError(Exception):
@@ -50,7 +51,7 @@ def load_data(dataset_name, base_path):
         cora_graph = to_networkx(cora_dataset[0], to_undirected=True)
         distances = nx.floyd_warshall_numpy(cora_graph)
 
-    return torch.tensor(distances)
+    return torch.tensor(distances).to('cuda')
 
 
 def train_distance_matrix(distances: torch.Tensor,
@@ -65,20 +66,21 @@ def train_distance_matrix(distances: torch.Tensor,
 
     num_nodes = distances.shape[0]
     edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
-    upper_adjency = torch.triu(distances, diagonal=1)
-    weights_opt = upper_adjency[upper_adjency != 0].float().requires_grad_(True)
+    upper_adjency = torch.triu(distances, diagonal=1).type(torch.float32)
+    weights_opt = upper_adjency[upper_adjency != 0].requires_grad_(True)
     optimizer = optim.Adam([weights_opt], lr=learning_rate)
     losses = []
     deltas = []
     errors = []
 
     def loss_fn(w):
-
-        adj = construct_weighted_matrix(w, num_nodes, edges)
-        sp_matrix = datasp(adj, scale_sp)
-        M_batch = make_batches(sp_matrix, batch_size, batch_size)
+        batch_indices = sample_batch_indices(num_nodes, 32)
+        M_batch = batched_datasp_submatrices(w, num_nodes, edges, batch_indices, beta=scale_sp)
+        print('done sp batch')
         delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_soft_max)
-        err = (distances-sp_matrix).pow(2).sum()
+        true_batches = torch.stack([distances[idx[:, None], idx] for idx in batch_indices])
+        err = (M_batch- true_batches).pow(2).mean()
+
         return delta + distance_reg*err, delta, err
 
     with tqdm(range(num_epochs), desc="Training Weights", disable=not verbose) as pbar:

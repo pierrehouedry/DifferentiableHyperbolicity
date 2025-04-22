@@ -1,69 +1,74 @@
 import numpy as np
 import networkx as nx
 
-def neighbor_join(distance_matrix):
+import numpy as np
+import networkx as nx
+
+def NJ(distance_matrix):
     """
-    Constructs a phylogenetic tree using the Neighbor-Joining algorithm from a distance matrix.
+    Construct a tree using the Neighbor‑Joining algorithm.
+
+    Parameters
+    ----------
+    distance_matrix : array_like, shape (n, n)
+        Symmetric matrix of pairwise distances between n taxa.
+
+    Returns
+    -------
+    tree : networkx.Graph
+        An unrooted tree (graph) whose nodes are indexed 0..2n−3, where
+        the first n nodes correspond to the original taxa and the remaining
+        nodes are internal nodes created during joining. Edges have a
+        'weight' attribute for branch lengths.
+    """
     
-    Parameters:
-        distance_matrix (numpy.ndarray): A symmetric n x n distance matrix.
-        
-    Returns:
-        networkx.Graph: A tree with edge weights representing the reconstructed phylogeny.
-    """
-    n = distance_matrix.shape[0]
     D = np.array(distance_matrix, dtype=float)
-    vertices = list(range(n))
+    n = D.shape[0]
+
     tree = nx.Graph()
-    tree.add_nodes_from(vertices)
+    tree.add_nodes_from(range(n))
 
     if n <= 1:
         return tree
 
-    next_node = n  # ID for new internal nodes
+    vertices = list(range(n))
+    next_node_id = n
 
-    while True:
-        if n == 2:
-            # Only two nodes left, just connect them
-            tree.add_edge(vertices[0], vertices[1], weight=D[0, 1])
-            break
+    while n > 2:
+        total_dist = D.sum(axis=0)
+        Q = (n - 2) * D - total_dist[np.newaxis, :] - total_dist[:, np.newaxis]
+        np.fill_diagonal(Q, np.inf)
 
-        # Compute the Q-matrix used to find the pair to join
-        total_dist = np.sum(D, axis=0)
-        Q = (n - 2) * D - total_dist[:, None] - total_dist
-        np.fill_diagonal(Q, np.inf)  # prevent selecting diagonal elements
-
-        # Find the pair (i, j) with minimal Q value
         i, j = divmod(np.argmin(Q), n)
-
-        # Compute branch lengths from new node to i and j
         delta = (total_dist[i] - total_dist[j]) / (n - 2)
-        li = (D[i, j] + delta) / 2
-        lj = (D[i, j] - delta) / 2
+        limb_length_i = 0.5 * (D[i, j] + delta)
+        limb_length_j = 0.5 * (D[i, j] - delta)
 
-        # Create distances from new node to remaining nodes
-        d_new = (D[i, :] + D[j, :] - D[i, j]) / 2
-        d_new = np.append(d_new, 0.0)  # Distance to itself is zero
+        u = next_node_id
+        tree.add_node(u)
+        tree.add_edge(u, vertices[i], weight=limb_length_i)
+        tree.add_edge(u, vertices[j], weight=limb_length_j)
 
-        # Update distance matrix: remove rows/cols i and j, add new row/col
-        D = np.delete(D, [i, j], axis=0)
-        D = np.delete(D, [i, j], axis=1)
-        D = np.vstack([D, d_new[:-1]])
-        d_new = np.append(d_new[:-1], 0.0)
-        D = np.column_stack([D, d_new])
+        new_row = 0.5 * (D[i, :] + D[j, :] - D[i, j])
+        D = np.vstack([D, new_row])
+        new_col = np.append(new_row, 0.0)[:, np.newaxis]
+        D = np.hstack([D, new_col])
 
-        # Update the tree
-        vi, vj = vertices[i], vertices[j]
-        tree.add_node(next_node)
-        tree.add_edge(next_node, vi, weight=li)
-        tree.add_edge(next_node, vj, weight=lj)
+        for idx in sorted((i, j), reverse=True):
+            D = np.delete(D, idx, axis=0)
+            D = np.delete(D, idx, axis=1)
 
-        # Update the list of vertices
-        vertices.pop(max(i, j))  # remove larger index first to avoid reindexing issues
+        v_i, v_j = vertices[i], vertices[j]
+        vertices.pop(max(i, j))
         vertices.pop(min(i, j))
-        vertices.append(next_node)
+        vertices.append(u)
 
-        next_node += 1
+        next_node_id += 1
         n -= 1
 
+    v1, v2 = vertices
+    tree.add_edge(v1, v2, weight=D[0, 1])
+
     return tree
+
+

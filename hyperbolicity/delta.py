@@ -27,38 +27,10 @@ def compute_hyperbolicity(M, scale=0):
     delta = (Stot_sorted[..., 0] - Stot_sorted[..., 1]) / 2
     # Find the maximum value of delta
     if scale:
-        return soft_max(delta, scale, dim=(0, 1, 2, 3))
+        #return soft_max(delta, scale, dim=(0, 1, 2, 3))
+        return torch.norm(delta).mean()
     else:
         return torch.max(delta)
-
-
-def make_batches(M, size_batches=10, nb_batches=1):
-    """
-    Samples random submatrices from a given distance matrix for batched hyperbolicity estimation.
-
-    Parameters:
-        M (torch.Tensor): A (N x N) distance matrix.
-        size_batches (int): Number of points in each batch (submatrix size).
-        nb_batches (int): Number of batches to sample.
-
-    Returns:
-        torch.Tensor: A tensor of shape (nb_batches, size_batches, size_batches) containing sampled submatrices.
-    """
-    N = M.size(0)
-    all_indices = torch.arange(N).to(M.device)
-    batches = []
-    for _ in range(nb_batches):
-        # Shuffle the indices to ensure random selection without replacement
-        shuffled_indices = all_indices[torch.randperm(N)]
-        # Select the first `size_batches` indices to form a submatrix
-        selected_indices = shuffled_indices[:size_batches]
-        # Create the submatrix using the selected indices
-        submatrix = M[selected_indices[:, None], selected_indices]
-        # Add the submatrix to the list of batches
-        batches.append(submatrix)
-    # Stack the list of batches into a single tensor
-
-    return torch.stack(batches)
 
 
 def compute_hyperbolicity_batch(M_batch, scale=0):
@@ -86,12 +58,13 @@ def compute_hyperbolicity_batch(M_batch, scale=0):
 
     # Find the maximum value of delta for each matrix in the batch
     if scale:
-        return soft_max(delta, scale, dim=(1, 2, 3, 4))
+        #return soft_max(delta, scale, dim=(1, 2, 3, 4))
+        return torch.norm(delta).mean()
     else:
         return torch.max(delta, dim=(1, 2, 3, 4))
 
 
-def compute_exact_hyperbolicity_naive(metric):
+def compute_exact_hyperbolicity_naive(metric, scale=0):
     """
     Computes the exact delta-hyperbolicity using the 4-point condition via brute-force enumeration.
 
@@ -113,7 +86,10 @@ def compute_exact_hyperbolicity_naive(metric):
                     S3 = metric[i, l] + metric[j, k]
                     Stot = torch.stack([S1, S2, S3], dim=-1)
                     Stot = Stot.sort(descending=True)[0]
-                    maxi = torch.max(maxi, (Stot[0]-Stot[1])/2)
+                    if scale !=0 :
+                        maxi = soft_max(torch.tensor([maxi,(Stot[0] - Stot[1]) / 2]), scale)
+                    else:
+                        maxi = torch.max(maxi, (Stot[0]-Stot[1])/2)
     return maxi
 
 
@@ -129,6 +105,7 @@ def compute_hyperbolicity_from_pairs(metric, ind, scale=0):
     Returns:
         torch.Tensor: Scalar tensor representing the (approximate) hyperbolicity over selected pairs.
     """
+
     # Extract (x, y) index pairs
     x, y = ind[:, 0], ind[:, 1]  # Shape: (P,)
 
@@ -142,11 +119,11 @@ def compute_hyperbolicity_from_pairs(metric, ind, scale=0):
     S3 = metric[x_exp, v[None, :]] + metric[y_exp, u[None, :]]  # (P, P)
 
     # Stack and sort
-    Stot = torch.stack([S1, S2, S3], dim=-1)  # Shape: (P, P, 3)
+    Stot = torch.stack([S2, S3], dim=-1)  # Shape: (P, P, 3)
     Stot_sorted = Stot.sort(dim=-1, descending=True)[0]
 
     # Compute K
-    K = (Stot_sorted[..., 0] - Stot_sorted[..., 1]) / 2  # Shape: (P, P)
+    K = (S1 - Stot_sorted[..., 0]) / 2  # Shape: (P, P)
 
     # Get the maximum value for each pair
     # return K.max()

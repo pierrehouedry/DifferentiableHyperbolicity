@@ -1,0 +1,6 @@
+2025-04-15 19:52:45,972 INFO ############  Let us GO   ############
+2025-04-15 19:52:45,972 INFO ############ Machine = epyc2 ############ 
+
+2025-04-15 19:52:45,972 INFO Doing dataset celegan
+2025-04-15 20:19:00,955 INFO The result dict is saved.
+2025-04-15 20:19:00,956 INFO ############ It is over DUDE ############

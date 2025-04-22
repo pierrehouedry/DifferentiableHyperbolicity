@@ -18,7 +18,7 @@ def linkage_to_distance_matrix(Z):
         clusters.append(clusters[j] + clusters[k])
     return D
 
-def gromov(distance_matrix, root):
+def gromov_tree(distance_matrix, root):
     """
     Computes a Gromov-style distance matrix from a given root using a hierarchical clustering
     approximation based on the induced ultrametric.

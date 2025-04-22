@@ -33,6 +33,7 @@ class TreeRep():
     tol then we round the distances to 0. 
     Optional, default = 1e-5
     """
+
     def __init__(self, d, tol = 1e-5):
         self.d = d
         self.n = self.d.shape[0]
@@ -46,8 +47,6 @@ class TreeRep():
 
         self.selfloop_analysis = False
         self.elapse_fit = 0.0
-
-
 
     """
     Inputs
@@ -82,7 +81,6 @@ class TreeRep():
             if x == y:
                 print("add ", x, y)
 
-
     """
     Inputs
     --------
@@ -109,6 +107,7 @@ class TreeRep():
       False if the edge is not contracted and
       gived the old center node r
     """
+    
     def contract_ra(self, r, a, b, c, V):
         if np.abs(self.W[r,a]) < self.tol:
             for v in V:
