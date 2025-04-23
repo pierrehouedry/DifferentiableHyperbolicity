@@ -15,6 +15,7 @@ import pandas as pd
 from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import to_networkx
 
+
 class ParamError(Exception):
     pass
 
@@ -56,6 +57,7 @@ def load_data(dataset_name, base_path):
 
 def train_distance_matrix(distances: torch.Tensor,
                           scale_delta: float,
+                          scale_soft_max: float,
                           distance_reg: float,
                           num_epochs: int,
                           n_batches: int,
@@ -69,11 +71,9 @@ def train_distance_matrix(distances: torch.Tensor,
     weights_opt = upper_adjency[upper_adjency != 0].requires_grad_(True)
     optimizer = optim.Adam([weights_opt], lr=learning_rate)
 
-
     losses = []
     deltas = []
     errors = []
-
 
     def projection(weight, num_nodes, edges):
         update_dist = construct_weighted_matrix(weight, num_nodes, edges)
@@ -131,8 +131,10 @@ if __name__ == '__main__':
                         help='Learning rates', default=1.0)
     parser.add_argument('-reg', '--distance_reg', nargs='?', type=float,
                         help='Distance regularization', default=1.0)
-    parser.add_argument('-ssd', '--scale_delta', nargs='?', type=float,
-                        help='Scale delta', default=2.0)
+    parser.add_argument('-ssd', '--scale_soft_max', nargs='?', type=float,
+                        help='Scale soft max', default=1.0)
+    parser.add_argument('-ssm', '--scale_delta', nargs='?', type=float,
+                        help='Scale delta', default=1.0)
     parser.add_argument('-ep', '--epochs', nargs='?', type=int,
                         help='Number of epochs', default=500)
     parser.add_argument('-bs', '--batch_size', nargs='?', type=int,
@@ -164,6 +166,7 @@ if __name__ == '__main__':
     results['distance_reg'] = args.distance_reg
     results['run_number'] = args.run_number
     results['scale_delta'] = args.scale_delta
+    results['scale_soft_max'] = args.scale_soft_max
     results['epochs'] = args.epochs
     results['batch_size'] = args.batch_size
     results['n_batches'] = args.n_batches
@@ -175,6 +178,7 @@ if __name__ == '__main__':
     try:
         weights, losses,  deltas, errors = train_distance_matrix(distances,
                                                                  scale_delta=args.scale_delta,
+                                                                 scale_soft_max=args.scale_soft_max,
                                                                  distance_reg=args.distance_reg,
                                                                  num_epochs=args.epochs,
                                                                  batch_size=args.batch_size,

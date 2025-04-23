@@ -51,6 +51,7 @@ def make_batches(M, size_batches=10, nb_batches=1):
 
     return torch.stack(batches)
 
+
 def datasp(weights: torch.Tensor, num_nodes, edges, beta: float = 1.0) -> torch.Tensor:
     """
     Computes a softened version of shortest path distances using the DataSP algorithm with a temperature parameter beta.
@@ -61,25 +62,26 @@ def datasp(weights: torch.Tensor, num_nodes, edges, beta: float = 1.0) -> torch.
     for k in range(num_nodes):
         for i in range(num_nodes):
             via_k = weighted_matrix[i, k] + weighted_matrix[k, :]
-            current = weighted_matrix[i, :]            
+            current = weighted_matrix[i, :]
             stacked = torch.stack([via_k, current], dim=0)  # shape (2, num_nodes)
             weighted_matrix[i, :] = soft_max(stacked, -beta, dim=0)
-    
+
     return weighted_matrix
 
 
-def sample_batch_indices(N: int, size_batches: int = 32, nb_batches: int = 32, device: str = 'cpu') -> list[torch.Tensor]:
-    """
-    Randomly samples node indices to create batches.
-    """
-    all_indices = torch.arange(N, device=device)
-    batches = []
-    for _ in range(nb_batches):
-        permuted = all_indices[torch.randperm(N)]
-        selected = permuted[:size_batches]
-        batches.append(selected)
+# def sample_batch_indices(N: int, size_batches: int = 32, nb_batches: int = 32, device: str = 'cpu'):
+#     """
+#     Randomly samples node indices to create batches.
+#     """
+#     all_indices = torch.arange(N, device=device)
+#     batches = []
+#     for _ in range(nb_batches):
+#         permuted = all_indices[torch.randperm(N)]
+#         selected = permuted[:size_batches]
+#         batches.append(selected)
 
-    return batches
+#     return batches
+
 
 def construct_weighted_matrix(weights: torch.Tensor, num_nodes: int, edges: torch.Tensor) -> torch.Tensor:
     """
@@ -133,10 +135,11 @@ def str2bool(v):
 
 
 def soft_min(x: torch.Tensor, scale: float = 1000, dim=-1) -> torch.Tensor:
-    return soft_max(x, scale=-scale, dim=dim) 
+    return soft_max(x, scale=-scale, dim=dim)
+
 
 def floyd_warshall(adj_matrix):
-    
+
     N = adj_matrix.size(0)
     dist = adj_matrix.clone()
     for k in range(N):
