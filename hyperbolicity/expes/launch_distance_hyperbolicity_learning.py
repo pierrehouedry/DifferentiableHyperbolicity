@@ -12,6 +12,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from torch_geometric.datasets import Planetoid
+from torch_geometric.utils import to_networkx
 
 class ParamError(Exception):
     pass
