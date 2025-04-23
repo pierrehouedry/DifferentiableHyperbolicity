@@ -6,7 +6,7 @@ import torch.optim as optim
 import networkx as nx
 from tqdm import tqdm
 from hyperbolicity.delta import compute_hyperbolicity_batch
-from hyperbolicity.utils import soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, create_log_dir
+from hyperbolicity.utils import str2bool, setup_logger, soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, create_log_dir
 import pickle
 import os
 import matplotlib.pyplot as plt
