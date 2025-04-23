@@ -27,8 +27,8 @@ def compute_hyperbolicity(M, scale=0):
     delta = (Stot_sorted[..., 0] - Stot_sorted[..., 1]) / 2
     # Find the maximum value of delta
     if scale:
-        #return soft_max(delta, scale, dim=(0, 1, 2, 3))
-        return torch.norm(delta).mean()
+        return soft_max(delta, scale, dim=(0, 1, 2, 3))
+        #return delta.sum()
     else:
         return torch.max(delta)
 

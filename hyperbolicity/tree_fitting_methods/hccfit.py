@@ -123,7 +123,6 @@ class HccLinkage():
             plt.show()
 
     def fit_tree(self, root):
-
         d_root = self.d[root]
         d_max = d_root.max()
         gp = np.tile(d_root, (self.n, 1)) + np.tile(d_root.reshape(self.n, 1), (1, self.n)) - self.d

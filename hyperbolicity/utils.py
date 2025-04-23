@@ -136,10 +136,9 @@ def soft_min(x: torch.Tensor, scale: float = 1000, dim=-1) -> torch.Tensor:
     return soft_max(x, scale=-scale, dim=dim) 
 
 def floyd_warshall(adj_matrix):
-
+    
     N = adj_matrix.size(0)
     dist = adj_matrix.clone()
-
     for k in range(N):
         dist = torch.minimum(dist, dist[:, k].unsqueeze(1) + dist[k, :].unsqueeze(0))
 
