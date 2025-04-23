@@ -1,19 +1,17 @@
-
 import socket
 from time import time
 import argparse
-from hyperbolicity.utils import create_log_dir, setup_logger, str2bool, soft_max, datasp, sample_batch_indices, batched_datasp_submatrices
 import torch
 import torch.optim as optim
 import networkx as nx
-from torch_geometric.datasets import Planetoid
-from torch_geometric.utils import to_networkx
 from tqdm import tqdm
 from hyperbolicity.delta import compute_hyperbolicity_batch
+from hyperbolicity.utils import soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, create_log_dir
 import pickle
 import os
-from timeit import default_timer as timer
-
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 class ParamError(Exception):
     pass
@@ -55,11 +53,11 @@ def load_data(dataset_name, base_path):
 
 
 def train_distance_matrix(distances: torch.Tensor,
-                          scale_sp: float,
                           scale_delta: float,
                           scale_soft_max: float,
                           distance_reg: float,
                           num_epochs: int,
+                          n_batches: int,
                           batch_size: int,
                           learning_rate: float,
                           verbose: bool):
@@ -67,19 +65,27 @@ def train_distance_matrix(distances: torch.Tensor,
     num_nodes = distances.shape[0]
     edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
     upper_adjency = torch.triu(distances, diagonal=1).type(torch.float32)
-    weights_opt = upper_adjency[upper_adjency != 0].requires_grad_(True)
-    optimizer = optim.Adam([weights_opt], lr=learning_rate)
+    true_upper = upper_adjency[upper_adjency != 0].to('cuda').detach().clone()
+    weights_opt = true_upper.clone().requires_grad_(True)
+    
+    
+    optimizer = optim.AdamW([weights_opt], lr=learning_rate, weight_decay=0)
     losses = []
     deltas = []
     errors = []
 
+
+    def projection(weight, num_nodes, edges):
+        update_dist = construct_weighted_matrix(weight, num_nodes, edges)
+        update_dist = floyd_warshall(update_dist)
+
+        return torch.triu(update_dist, diagonal=1)[torch.triu(update_dist, diagonal=1) != 0]
+
     def loss_fn(w):
-        batch_indices = sample_batch_indices(num_nodes, 32)
-        M_batch = batched_datasp_submatrices(w, num_nodes, edges, batch_indices, beta=scale_sp)
-        print('done sp batch')
+        update_dist = construct_weighted_matrix(w, num_nodes, edges)
+        M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
         delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_soft_max)
-        true_batches = torch.stack([distances[idx[:, None], idx] for idx in batch_indices])
-        err = (M_batch- true_batches).pow(2).mean()
+        err = (distances-update_dist).pow(2).mean()
 
         return delta + distance_reg*err, delta, err
 
@@ -87,7 +93,8 @@ def train_distance_matrix(distances: torch.Tensor,
         for epoch in pbar:
             optimizer.zero_grad()
             loss, delta, err = loss_fn(weights_opt)
-            pbar.set_description('loss = {0:.5f}'.format(loss.item()))
+
+            pbar.set_description(f"loss = {loss.item():.5f}, delta = {delta:.5f}, error = {err:.5f}")
             if torch.isnan(loss):
                 raise NanError('Loss is Nan')
             losses.append(loss.item())
@@ -95,6 +102,9 @@ def train_distance_matrix(distances: torch.Tensor,
             errors.append(err.item())
             loss.backward()
             optimizer.step()
+
+            with torch.no_grad():
+                weights_opt.data = projection(weights_opt, num_nodes, edges)
 
     return weights_opt.detach().clone(), losses, deltas, errors
 
