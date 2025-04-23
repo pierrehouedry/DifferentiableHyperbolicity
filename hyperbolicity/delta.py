@@ -58,7 +58,6 @@ def compute_hyperbolicity_batch(M_batch, scale=0):
     # Find the maximum value of delta for each matrix in the batch
     if scale:
         return soft_max(delta, scale, dim=(1, 2, 3, 4))
-        # return torch.norm(delta).mean()
     else:
         return torch.max(delta, dim=(1, 2, 3, 4))
 

@@ -1,21 +1,19 @@
-
 import socket
 from time import time
 import argparse
-from hyperbolicity.delta import compute_hyperbolicity_batch, compute_hyperbolicity
-from hyperbolicity.utils import soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, setup_logger, str2bool, create_log_dir
-from hyperbolicity.tree_fitting_methods.gromov import gromov_tree
 import torch
 import torch.optim as optim
 import networkx as nx
-from torch_geometric.datasets import Planetoid
-from torch_geometric.utils import to_networkx
 from tqdm import tqdm
 from hyperbolicity.delta import compute_hyperbolicity_batch
+from hyperbolicity.utils import str2bool, setup_logger, soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, create_log_dir
 import pickle
 import os
-from timeit import default_timer as timer
-
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from torch_geometric.datasets import Planetoid
+from torch_geometric.utils import to_networkx
 
 class ParamError(Exception):
     pass
@@ -69,11 +67,13 @@ def train_distance_matrix(distances: torch.Tensor,
     edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
     upper_adjency = torch.triu(distances, diagonal=1).type(torch.float32)
     weights_opt = upper_adjency[upper_adjency != 0].requires_grad_(True)
-
     optimizer = optim.Adam([weights_opt], lr=learning_rate)
+
+
     losses = []
     deltas = []
     errors = []
+
 
     def projection(weight, num_nodes, edges):
         update_dist = construct_weighted_matrix(weight, num_nodes, edges)
@@ -84,9 +84,9 @@ def train_distance_matrix(distances: torch.Tensor,
     def loss_fn(w):
         update_dist = construct_weighted_matrix(w, num_nodes, edges)
         M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
-        delta = compute_hyperbolicity_batch(M_batch, scale=scale_delta)
-        # err = soft_max(torch.abs(distances.flatten()-update_dist.flatten()), scale=scale_soft_max)
-        err = (distances - update_dist).pow(2).mean()
+
+        delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_soft_max)
+        err = (distances-update_dist).pow(2).mean()
 
         return delta + distance_reg*err, delta, err
 
