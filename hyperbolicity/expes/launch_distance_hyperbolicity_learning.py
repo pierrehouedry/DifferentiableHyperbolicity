@@ -9,9 +9,7 @@ from hyperbolicity.delta import compute_hyperbolicity_batch
 from hyperbolicity.utils import str2bool, setup_logger, soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, create_log_dir
 import pickle
 import os
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import to_networkx
 
@@ -57,13 +55,17 @@ def load_data(dataset_name, base_path):
 
 def train_distance_matrix(distances: torch.Tensor,
                           scale_delta: float,
-                          scale_soft_max: float,
                           distance_reg: float,
                           num_epochs: int,
                           n_batches: int,
                           batch_size: int,
                           learning_rate: float,
-                          verbose: bool):
+                          verbose: bool,
+                          gpu: bool,
+                          thresh=1e-5):
+
+    if gpu:
+        distances = distances.to('cuda')
 
     num_nodes = distances.shape[0]
     edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
@@ -85,10 +87,14 @@ def train_distance_matrix(distances: torch.Tensor,
         update_dist = construct_weighted_matrix(w, num_nodes, edges)
         M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
 
-        delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_soft_max)
+        delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_delta)
         err = (distances-update_dist).pow(2).mean()
 
         return delta + distance_reg*err, delta, err
+
+    patience = 30
+    best_loss = float('inf')
+    patience_counter = 0
 
     with tqdm(range(num_epochs), desc="Training Weights", disable=not verbose) as pbar:
         for epoch in pbar:
@@ -107,7 +113,17 @@ def train_distance_matrix(distances: torch.Tensor,
             with torch.no_grad():
                 weights_opt.data = projection(weights_opt, num_nodes, edges)
 
-    return weights_opt.detach().clone(), losses, deltas, errors
+            if loss.item() < best_loss - thresh:
+                best_loss = loss.item()
+                patience_counter = 0
+            else:
+                patience_counter += 1
+
+            if patience_counter >= patience:
+                pbar.set_description("Early stopping triggered")
+                break
+
+    return weights_opt.detach().clone().cpu(), losses, deltas, errors
 
 
 if __name__ == '__main__':
@@ -122,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('-dp', '--data_path', nargs='?',
                         type=str, help='The path to the data', required=True)
     parser.add_argument('-v', '--verbose', nargs='?',
-                        help='to verbose or not to verbose', type=str2bool, default=True)
+                        help='to verbose or not to verbose', type=str2bool, default=False)
     parser.add_argument('-rn', '--run_number', nargs='?', type=int,
                         help='The number of the run (for variance)', default=0)
     parser.add_argument('-ds', '--dataset', nargs='?', type=str, help='dataset to choose',
@@ -131,17 +147,16 @@ if __name__ == '__main__':
                         help='Learning rates', default=1.0)
     parser.add_argument('-reg', '--distance_reg', nargs='?', type=float,
                         help='Distance regularization', default=1.0)
-    parser.add_argument('-ssd', '--scale_soft_max', nargs='?', type=float,
+    parser.add_argument('-ssd', '--scale_delta', nargs='?', type=float,
                         help='Scale soft max', default=1.0)
-    parser.add_argument('-ssm', '--scale_delta', nargs='?', type=float,
-                        help='Scale delta', default=1.0)
     parser.add_argument('-ep', '--epochs', nargs='?', type=int,
                         help='Number of epochs', default=500)
     parser.add_argument('-bs', '--batch_size', nargs='?', type=int,
                         help='Batch size', default=32)
     parser.add_argument('-nb', '--n_batches', nargs='?', type=int,
                         help='Number of batches', default=50)
-
+    parser.add_argument('-gpu', '--gpu', nargs='?',
+                        help='to use GPU or not', type=str2bool, default=False)
     args = parser.parse_args()
 
     try:
@@ -166,10 +181,10 @@ if __name__ == '__main__':
     results['distance_reg'] = args.distance_reg
     results['run_number'] = args.run_number
     results['scale_delta'] = args.scale_delta
-    results['scale_soft_max'] = args.scale_soft_max
     results['epochs'] = args.epochs
     results['batch_size'] = args.batch_size
     results['n_batches'] = args.n_batches
+    results['gpu'] = args.gpu
 
     # Load data
     logger.info('Doing dataset {}'.format(args.dataset))
@@ -178,13 +193,13 @@ if __name__ == '__main__':
     try:
         weights, losses,  deltas, errors = train_distance_matrix(distances,
                                                                  scale_delta=args.scale_delta,
-                                                                 scale_soft_max=args.scale_soft_max,
                                                                  distance_reg=args.distance_reg,
                                                                  num_epochs=args.epochs,
                                                                  batch_size=args.batch_size,
                                                                  n_batches=args.n_batches,
                                                                  learning_rate=args.learning_rate,
-                                                                 verbose=args.verbose)
+                                                                 verbose=args.verbose,
+                                                                 gpu=args.gpu)
         results['weights'] = weights
         results['loss'] = losses
         results['deltas'] = deltas
