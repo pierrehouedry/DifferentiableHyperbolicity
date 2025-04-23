@@ -53,19 +53,21 @@ def enforce_gromov_closure(G, D, root):
     next_node = max(G.nodes) + 1
 
     for x, y in itertools.combinations(range(n), 2):
+
         if x == root or y == root:
             continue
 
         gromov = 0.5 * (D[root, x] + D[root, y] - D[x, y])
-
+        print(gromov)
         # Check if any node z in G has distance gromov from root
-        existing_nodes = [z for z in G.nodes if np.isclose(D[root, z], gromov)]
+        existing_nodes = [z for z in G.nodes if (D[root, z]==gromov) and (D[z, x] == D[root, x] - gromov) and (D[z, y] == D[root, y] - gromov) and z!=root]
 
+        print(existing_nodes)
         if not existing_nodes:
             # Create new Steiner node
             s = next_node
-            next_node += 1
             G.add_node(s)
+            next_node += 1
 
             # Remove any edge (root, x) or (root, y) if present
             if G.has_edge(root, x):
@@ -79,6 +81,8 @@ def enforce_gromov_closure(G, D, root):
             # Add edges from s to x and y
             G.add_edge(s, x, weight=D[root, x] - gromov)
             G.add_edge(s, y, weight=D[root, y] - gromov)
+
+        D = nx.floyd_warshall_numpy(G)
 
     return G
 
