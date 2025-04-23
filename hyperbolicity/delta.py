@@ -28,7 +28,6 @@ def compute_hyperbolicity(M, scale=0):
     # Find the maximum value of delta
     if scale:
         return soft_max(delta, scale, dim=(0, 1, 2, 3))
-        #return delta.sum()
     else:
         return torch.max(delta)
 
@@ -58,8 +57,8 @@ def compute_hyperbolicity_batch(M_batch, scale=0):
 
     # Find the maximum value of delta for each matrix in the batch
     if scale:
-        #return soft_max(delta, scale, dim=(1, 2, 3, 4))
-        return torch.norm(delta).mean()
+        return soft_max(delta, scale, dim=(1, 2, 3, 4))
+        # return torch.norm(delta).mean()
     else:
         return torch.max(delta, dim=(1, 2, 3, 4))
 
@@ -86,8 +85,8 @@ def compute_exact_hyperbolicity_naive(metric, scale=0):
                     S3 = metric[i, l] + metric[j, k]
                     Stot = torch.stack([S1, S2, S3], dim=-1)
                     Stot = Stot.sort(descending=True)[0]
-                    if scale !=0 :
-                        maxi = soft_max(torch.tensor([maxi,(Stot[0] - Stot[1]) / 2]), scale)
+                    if scale != 0:
+                        maxi = soft_max(torch.tensor([maxi, (Stot[0] - Stot[1]) / 2]), scale)
                     else:
                         maxi = torch.max(maxi, (Stot[0]-Stot[1])/2)
     return maxi

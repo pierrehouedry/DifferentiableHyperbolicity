@@ -2,14 +2,14 @@
 # to use it python script_writer.py
 import itertools
 
-name_expe = 'test'  # name for the experience
+name_expe = 'celegan'  # name for the experience
 name = 'expe_{0}'.format(name_expe)
-f = open('hyperbolicity/expes/launch_files/' + name + '.sh', "w")
+f = open('./launch_files/' + name + '.sh', "w")
 f.write('#!/bin/bash'+'\n')
-f.write('export OMP_NUM_THREADS=1'+'\n')
+f.write('export OMP_NUM_THREADS=2'+'\n')
 
-results_path = '/share/home/houedry/projects/hyperbolic/DifferentiableHyperbolicity/hyperbolicity/results_expes/' + name + '/'
-data_path = "/share/home/houedry/projects/hyperbolic/DifferentiableHyperbolicity/hyperbolicity/datasets/"
+results_path = '../results_expes/' + name + '/'
+data_path = "../../datasets/"
 
 
 f.write('mkdir -p {0}'.format(results_path)+'\n')
@@ -22,13 +22,13 @@ scale_delta = [10000]
 scale_softmax = [10000]
 epochs = [500]
 batch_size = [32]
-run_numbers = [0, 1, 2, 3, 4]  #for variance
+run_numbers = [0, 1, 2, 3, 4]  # for variance
 nb_group = 10  # number of jobs in // on the same machine
 
 counter = 0
 overallcounter = 0
 for ds, lr, reg, ssp, ssd, sssm, ep, bs, rn in itertools.product(datasets, learning_rates, distance_regs, scale_sp, scale_delta, scale_softmax, epochs, batch_size, run_numbers):
-    f.write('python /share/home/houedry/projects/hyperbolic/DifferentiableHyperbolicity/hyperbolicity/expes/launch_distance_hyperbolicity_learning.py -r {0} -dp {1} -ds {2} -lr {3} -reg {4} -ssp {5} -ssd {6} -sssm {7} -ep {8} -bs {9} -rn {10} &'.format(
+    f.write('python ../launch_distance_hyperbolicity_learning.py  -r {0} -dp {1} -ds {2} -lr {3} -reg {4} -ssp {5} -ssd {6} -sssm {7} -ep {8} -bs {9} -rn {10} &'.format(
         results_path, data_path, ds, lr, reg, ssp, ssd, sssm, ep, bs, rn)+'\n')
     counter += 1
     overallcounter += 1

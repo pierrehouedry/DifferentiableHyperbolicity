@@ -2,7 +2,9 @@
 import socket
 from time import time
 import argparse
-from hyperbolicity.utils import create_log_dir, setup_logger, str2bool, soft_max, datasp, sample_batch_indices, batched_datasp_submatrices
+from hyperbolicity.delta import compute_hyperbolicity_batch, compute_hyperbolicity
+from hyperbolicity.utils import soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, setup_logger, str2bool, create_log_dir
+from hyperbolicity.tree_fitting_methods.gromov import gromov_tree
 import torch
 import torch.optim as optim
 import networkx as nx
@@ -51,15 +53,14 @@ def load_data(dataset_name, base_path):
         cora_graph = to_networkx(cora_dataset[0], to_undirected=True)
         distances = nx.floyd_warshall_numpy(cora_graph)
 
-    return torch.tensor(distances).to('cuda')
+    return torch.tensor(distances)
 
 
 def train_distance_matrix(distances: torch.Tensor,
-                          scale_sp: float,
                           scale_delta: float,
-                          scale_soft_max: float,
                           distance_reg: float,
                           num_epochs: int,
+                          n_batches: int,
                           batch_size: int,
                           learning_rate: float,
                           verbose: bool):
@@ -68,18 +69,24 @@ def train_distance_matrix(distances: torch.Tensor,
     edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
     upper_adjency = torch.triu(distances, diagonal=1).type(torch.float32)
     weights_opt = upper_adjency[upper_adjency != 0].requires_grad_(True)
+
     optimizer = optim.Adam([weights_opt], lr=learning_rate)
     losses = []
     deltas = []
     errors = []
 
+    def projection(weight, num_nodes, edges):
+        update_dist = construct_weighted_matrix(weight, num_nodes, edges)
+        update_dist = floyd_warshall(update_dist)
+
+        return torch.triu(update_dist, diagonal=1)[torch.triu(update_dist, diagonal=1) != 0]  # , pairs
+
     def loss_fn(w):
-        batch_indices = sample_batch_indices(num_nodes, 32)
-        M_batch = batched_datasp_submatrices(w, num_nodes, edges, batch_indices, beta=scale_sp)
-        print('done sp batch')
-        delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_soft_max)
-        true_batches = torch.stack([distances[idx[:, None], idx] for idx in batch_indices])
-        err = (M_batch- true_batches).pow(2).mean()
+        update_dist = construct_weighted_matrix(w, num_nodes, edges)
+        M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
+        delta = compute_hyperbolicity_batch(M_batch, scale=scale_delta)
+        # err = soft_max(torch.abs(distances.flatten()-update_dist.flatten()), scale=scale_soft_max)
+        err = (distances - update_dist).pow(2).mean()
 
         return delta + distance_reg*err, delta, err
 
@@ -87,7 +94,8 @@ def train_distance_matrix(distances: torch.Tensor,
         for epoch in pbar:
             optimizer.zero_grad()
             loss, delta, err = loss_fn(weights_opt)
-            pbar.set_description('loss = {0:.5f}'.format(loss.item()))
+
+            pbar.set_description(f"loss = {loss.item():.5f}, delta = {delta:.5f}, error = {err:.5f}")
             if torch.isnan(loss):
                 raise NanError('Loss is Nan')
             losses.append(loss.item())
@@ -95,6 +103,9 @@ def train_distance_matrix(distances: torch.Tensor,
             errors.append(err.item())
             loss.backward()
             optimizer.step()
+
+            with torch.no_grad():
+                weights_opt.data = projection(weights_opt, num_nodes, edges)
 
     return weights_opt.detach().clone(), losses, deltas, errors
 
@@ -120,16 +131,14 @@ if __name__ == '__main__':
                         help='Learning rates', default=1.0)
     parser.add_argument('-reg', '--distance_reg', nargs='?', type=float,
                         help='Distance regularization', default=1.0)
-    parser.add_argument('-ssp', '--scale_sp', nargs='?', type=float,
-                        help='Scale shortest path', default=10000.0)
     parser.add_argument('-ssd', '--scale_delta', nargs='?', type=float,
-                        help='Scale delta', default=10000.0)
-    parser.add_argument('-sssm', '--scale_softmax', nargs='?', type=float,
-                        help='Scale soft max', default=10000.0)
+                        help='Scale delta', default=2.0)
     parser.add_argument('-ep', '--epochs', nargs='?', type=int,
                         help='Number of epochs', default=500)
     parser.add_argument('-bs', '--batch_size', nargs='?', type=int,
                         help='Batch size', default=32)
+    parser.add_argument('-nb', '--n_batches', nargs='?', type=int,
+                        help='Number of batches', default=50)
 
     args = parser.parse_args()
 
@@ -154,11 +163,10 @@ if __name__ == '__main__':
     results['learning_rate'] = args.learning_rate
     results['distance_reg'] = args.distance_reg
     results['run_number'] = args.run_number
-    results['scale_sp'] = args.scale_sp
     results['scale_delta'] = args.scale_delta
-    results['scale_softmax'] = args.scale_softmax
     results['epochs'] = args.epochs
     results['batch_size'] = args.batch_size
+    results['n_batches'] = args.n_batches
 
     # Load data
     logger.info('Doing dataset {}'.format(args.dataset))
@@ -166,12 +174,11 @@ if __name__ == '__main__':
 
     try:
         weights, losses,  deltas, errors = train_distance_matrix(distances,
-                                                                 scale_sp=args.scale_sp,
                                                                  scale_delta=args.scale_delta,
-                                                                 scale_soft_max=args.scale_softmax,
                                                                  distance_reg=args.distance_reg,
                                                                  num_epochs=args.epochs,
                                                                  batch_size=args.batch_size,
+                                                                 n_batches=args.n_batches,
                                                                  learning_rate=args.learning_rate,
                                                                  verbose=args.verbose)
         results['weights'] = weights
@@ -190,3 +197,48 @@ if __name__ == '__main__':
         pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
     logger.info('The result dict is saved.')
     logger.info('############ It is over DUDE ############')
+
+
+# def train_distance_matrix(distances: torch.Tensor,
+#                           scale_sp: float,
+#                           scale_delta: float,
+#                           scale_soft_max: float,
+#                           distance_reg: float,
+#                           num_epochs: int,
+#                           batch_size: int,
+#                           learning_rate: float,
+#                           verbose: bool):
+
+#     num_nodes = distances.shape[0]
+#     edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
+#     upper_adjency = torch.triu(distances, diagonal=1).type(torch.float32)
+#     weights_opt = upper_adjency[upper_adjency != 0].requires_grad_(True)
+#     optimizer = optim.Adam([weights_opt], lr=learning_rate)
+#     losses = []
+#     deltas = []
+#     errors = []
+
+#     def loss_fn(w):
+#         batch_indices = sample_batch_indices(num_nodes, 32)
+#         M_batch = batched_datasp_submatrices(w, num_nodes, edges, batch_indices, beta=scale_sp)
+#         print('done sp batch')
+#         delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_soft_max)
+#         true_batches = torch.stack([distances[idx[:, None], idx] for idx in batch_indices])
+#         err = (M_batch - true_batches).pow(2).mean()
+
+#         return delta + distance_reg*err, delta, err
+
+#     with tqdm(range(num_epochs), desc="Training Weights", disable=not verbose) as pbar:
+#         for epoch in pbar:
+#             optimizer.zero_grad()
+#             loss, delta, err = loss_fn(weights_opt)
+#             pbar.set_description('loss = {0:.5f}'.format(loss.item()))
+#             if torch.isnan(loss):
+#                 raise NanError('Loss is Nan')
+#             losses.append(loss.item())
+#             deltas.append(delta.item())
+#             errors.append(err.item())
+#             loss.backward()
+#             optimizer.step()
+
+#     return weights_opt.detach().clone(), losses, deltas, errors
