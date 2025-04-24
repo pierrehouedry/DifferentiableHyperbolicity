@@ -1,5 +1,5 @@
 hyperbolicity.egg-info/*
 /hyperbolicity/__pycache__
 /hyperbolicity/expes/launch_files
-/hyperbolicity/expes/results_expes
 *.DS_Store
+/hyperbolicity/expes/results_expes/*
