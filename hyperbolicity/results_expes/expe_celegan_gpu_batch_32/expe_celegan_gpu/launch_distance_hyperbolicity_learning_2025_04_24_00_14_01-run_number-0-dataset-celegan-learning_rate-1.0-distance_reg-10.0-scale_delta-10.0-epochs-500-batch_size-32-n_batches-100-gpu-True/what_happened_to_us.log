@@ -1,7 +1,0 @@
-2025-04-24 00:14:01,380 INFO ############  Let us GO   ############
-2025-04-24 00:14:01,382 INFO ############ Machine = r740server2 ############ 
-
-2025-04-24 00:14:01,382 INFO Doing dataset celegan
-2025-04-24 00:14:06,464 INFO !!! Loss is Nan !!!
-2025-04-24 00:14:06,469 INFO The result dict is saved.
-2025-04-24 00:14:06,469 INFO ############ It is over DUDE ############
