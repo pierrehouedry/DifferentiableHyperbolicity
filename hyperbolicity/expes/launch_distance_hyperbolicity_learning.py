@@ -116,6 +116,7 @@ def train_distance_matrix(distances: torch.Tensor,
 
             if loss.item() < best_loss - thresh:
                 best_loss = loss.item()
+                best_weights = weights_opt.detach().clone().cpu()
                 patience_counter = 0
             else:
                 patience_counter += 1

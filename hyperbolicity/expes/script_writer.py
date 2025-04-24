@@ -14,30 +14,46 @@ data_path = "../../datasets/"
 
 f.write('mkdir -p {0}'.format(results_path)+'\n')
 
-datasets = ['phd']
-learning_rates = [1e-4, 1e-3, 1e-2, 1e-1]
-distance_regs = [1e-4, 1e-3, 1e-2, 1e-1, 0.1, 1.0, 10]
-scale_delta = [1e-3, 1e-2, 1e-1, 1.0, 10, 100]
-epochs = [500]
-batch_size = [8, 16]
-n_batches = [1000, 10000]
+datasets = ['celegan']
+
+# learning_rates = [1e-4, 1e-3, 1e-2, 1e-1]
+# distance_regs = [1e-4, 1e-3, 1e-2, 1e-1, 0.1, 1.0, 10]
+# scale_delta = [1e-3, 1e-2, 1e-1, 1.0, 10, 100]
+# epochs = [500]
+# batch_size = [(8, 1000), (8, 10000), (16, 500), (16, 1000), (32, 50), (32, 100)]
+# run_numbers = [0]  # for variance
+# nb_group = 10  # number of jobs in // on the same machine
+# gpu = False
+# parallel = False
+
+
+learning_rates = [1e-1, 1e1]
+distance_regs = [10]
+scale_delta = [100]
+epochs = [2]
+batch_size = [(32, 100)]
 run_numbers = [0]  # for variance
 nb_group = 10  # number of jobs in // on the same machine
-gpu = True
+gpu = False
+parallel = False
+
+if parallel and gpu:
+    raise Exception('You cannot use GPU in parallel (it is too dangerous)')
 
 counter = 0
 overallcounter = 0
-for ds, lr, reg, ssd, ep, bs, nb, rn in itertools.product(datasets, learning_rates, distance_regs, scale_delta, epochs, batch_size, n_batches, run_numbers):
-    if gpu:
-        f.write('python ../launch_distance_hyperbolicity_learning.py  -r {0} -dp {1} -ds {2} -lr {3} -reg {4} -ssd {5}  -ep {6} -bs {7} -nb {8} -rn {9} -gpu {10}'.format(
-            results_path, data_path, ds, lr, reg, ssd, ep, bs, nb, rn, True)+'\n')
-    else:
+for ds, lr, reg, ssd, ep, bs, rn in itertools.product(datasets, learning_rates, distance_regs, scale_delta, epochs, batch_size, run_numbers):
+    if parallel:
         f.write('python ../launch_distance_hyperbolicity_learning.py  -r {0} -dp {1} -ds {2} -lr {3} -reg {4} -ssd {5}  -ep {6} -bs {7} -nb {8} -rn {9} -gpu {10} &'.format(
-            results_path, data_path, ds, lr, reg, ssd, ep, bs, nb, rn, False)+'\n')
+            results_path, data_path, ds, lr, reg, ssd, ep, bs[0], bs[1], rn, gpu)+'\n')
+    else:
+        f.write('python ../launch_distance_hyperbolicity_learning.py  -r {0} -dp {1} -ds {2} -lr {3} -reg {4} -ssd {5}  -ep {6} -bs {7} -nb {8} -rn {9} -gpu {10}'.format(
+            results_path, data_path, ds, lr, reg, ssd, ep, bs[0], bs[1], rn, gpu)+'\n')
     counter += 1
     overallcounter += 1
     if counter == nb_group:
-        f.write('wait'+'\n')
+        if parallel:
+            f.write('wait'+'\n')
         counter = 0
 print('NB jobs = {}'.format(overallcounter))
 # %%
