@@ -1,0 +1,12 @@
+log_dir,../results_expes/expe_celegan_gpu/
+data_path,../../datasets/
+verbose,True
+run_number,0
+dataset,celegan
+learning_rate,1.0
+distance_reg,0.001
+scale_delta,100.0
+epochs,500
+batch_size,32
+n_batches,100
+gpu,True

@@ -1,0 +1,6 @@
+2025-04-23 20:06:41,239 INFO ############  Let us GO   ############
+2025-04-23 20:06:41,239 INFO ############ Machine = r740server2 ############ 
+
+2025-04-23 20:06:41,239 INFO Doing dataset celegan
+2025-04-23 20:06:58,165 INFO The result dict is saved.
+2025-04-23 20:06:58,166 INFO ############ It is over DUDE ############

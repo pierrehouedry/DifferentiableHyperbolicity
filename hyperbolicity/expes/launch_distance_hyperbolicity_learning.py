@@ -12,6 +12,7 @@ import os
 import numpy as np
 from torch_geometric.datasets import Planetoid
 from torch_geometric.utils import to_networkx
+import time
 
 
 class ParamError(Exception):
@@ -92,10 +93,10 @@ def train_distance_matrix(distances: torch.Tensor,
 
         return delta + distance_reg*err, delta, err
 
-    patience = 30
+    patience = 50
     best_loss = float('inf')
     patience_counter = 0
-
+    start = time.time()
     with tqdm(range(num_epochs), desc="Training Weights", disable=not verbose) as pbar:
         for epoch in pbar:
             optimizer.zero_grad()
@@ -122,9 +123,10 @@ def train_distance_matrix(distances: torch.Tensor,
             if patience_counter >= patience:
                 pbar.set_description("Early stopping triggered")
                 break
+    end = time.time()
+    return weights_opt.detach().clone().cpu(), losses, deltas, errors, end-start
 
-    return weights_opt.detach().clone().cpu(), losses, deltas, errors
-
+    
 
 if __name__ == '__main__':
 
@@ -191,7 +193,7 @@ if __name__ == '__main__':
     distances = load_data(args.dataset, args.data_path)
 
     try:
-        weights, losses,  deltas, errors = train_distance_matrix(distances,
+        weights, losses,  deltas, errors, duration = train_distance_matrix(distances,
                                                                  scale_delta=args.scale_delta,
                                                                  distance_reg=args.distance_reg,
                                                                  num_epochs=args.epochs,
@@ -214,6 +216,7 @@ if __name__ == '__main__':
 
     with open(log_dir + '/res.pickle', 'wb') as handle:
         pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    logger.info(f'Duration of expe: {duration}s')
     logger.info('The result dict is saved.')
     logger.info('############ It is over DUDE ############')
 

@@ -14,27 +14,17 @@ data_path = "../../datasets/"
 
 f.write('mkdir -p {0}'.format(results_path)+'\n')
 
-datasets = ['celegan']
-learning_rates = [1e-4, 1e-3, 1e-2, 1e-1, 1.0]
+datasets = ['phd']
+learning_rates = [1e-4, 1e-3, 1e-2, 1e-1]
 distance_regs = [1e-4, 1e-3, 1e-2, 1e-1, 0.1, 1.0, 10]
 scale_delta = [1e-3, 1e-2, 1e-1, 1.0, 10, 100]
 epochs = [500]
-batch_size = [32, 64]
-n_batches = [50, 100]
+batch_size = [8, 16]
+n_batches = [1000, 10000]
 run_numbers = [0]  # for variance
 nb_group = 10  # number of jobs in // on the same machine
-gpu = False
+gpu = True
 
-# learning_rates = [0.5]
-# distance_regs = [10]
-# scale_delta = [100]
-# scale_softmax = [100]
-# epochs = [500]
-# batch_size = [32]
-# n_batches = [5]
-# run_numbers = [0]  # for variance
-# nb_group = 1  # number of jobs in // on the same machine
-# gpu = False
 counter = 0
 overallcounter = 0
 for ds, lr, reg, ssd, ep, bs, nb, rn in itertools.product(datasets, learning_rates, distance_regs, scale_delta, epochs, batch_size, n_batches, run_numbers):
