@@ -39,17 +39,16 @@ def load_data(dataset_name, base_path):
             distances = pickle.load(f)
 
     elif dataset_name == 'airport':
-        airport = 'airport/airport.p'
+        airport = 'D_airport.pkl'
         airport_path = os.path.join(base_path, airport)
         with open(airport_path, 'rb') as f:
-            aiport_graph = pickle.load(f)
-            distances = nx.floyd_warshall_numpy(aiport_graph)
+            distances = pickle.load(f)
 
     elif dataset_name == 'cora':
-        cora_path = os.path.join(base_path, 'cora')
-        cora_dataset = Planetoid(root=cora_path, name='Cora')
-        cora_graph = to_networkx(cora_dataset[0], to_undirected=True)
-        distances = nx.floyd_warshall_numpy(cora_graph)
+        cora = 'D_cora.pkl'
+        cora_path = os.path.join(base_path, cora)
+        with open(cora_path, 'rb') as f:
+            distances = pickle.load(f)
 
     return torch.tensor(distances)
 
