@@ -6,7 +6,7 @@ import torch.optim as optim
 import networkx as nx
 from tqdm import tqdm
 from hyperbolicity.delta import compute_hyperbolicity_batch
-from hyperbolicity.utils import str2bool, setup_logger, soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, create_log_dir
+from hyperbolicity.utils import str2bool, setup_logger, soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, create_log_dir, compute_delta_from_distances_batched
 import pickle
 import os
 import numpy as np
@@ -87,7 +87,7 @@ def train_distance_matrix(distances: torch.Tensor,
         update_dist = construct_weighted_matrix(w, num_nodes, edges)
         M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
 
-        delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_delta)
+        delta = soft_max(compute_delta_from_distances_batched(M_batch, scale=scale_delta), scale=scale_delta)
         err = (distances-update_dist).pow(2).mean()
 
         return delta + distance_reg*err, delta, err
