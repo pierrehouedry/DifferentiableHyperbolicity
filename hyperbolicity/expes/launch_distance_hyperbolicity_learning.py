@@ -62,8 +62,7 @@ def train_distance_matrix(distances: torch.Tensor,
                           batch_size: int,
                           learning_rate: float,
                           verbose: bool,
-                          gpu: bool,
-                          thresh=1e-5):
+                          gpu: bool):
 
     if gpu:
         distances = distances.to('cuda')
@@ -95,6 +94,7 @@ def train_distance_matrix(distances: torch.Tensor,
 
     patience = 50
     best_loss = float('inf')
+    best_weights = weights_opt.detach().clone().cpu()
     patience_counter = 0
     start = time.time()
     with tqdm(range(num_epochs), desc="Training Weights", disable=not verbose) as pbar:
@@ -114,7 +114,7 @@ def train_distance_matrix(distances: torch.Tensor,
             with torch.no_grad():
                 weights_opt.data = projection(weights_opt, num_nodes, edges)
 
-            if loss.item() < best_loss - thresh:
+            if loss.item() < best_loss:
                 best_loss = loss.item()
                 best_weights = weights_opt.detach().clone().cpu()
                 patience_counter = 0
@@ -125,9 +125,8 @@ def train_distance_matrix(distances: torch.Tensor,
                 pbar.set_description("Early stopping triggered")
                 break
     end = time.time()
-    return weights_opt.detach().clone().cpu(), losses, deltas, errors, end-start
+    return best_weights, losses, deltas, errors, end-start
 
-    
 
 if __name__ == '__main__':
 
@@ -141,7 +140,7 @@ if __name__ == '__main__':
     parser.add_argument('-dp', '--data_path', nargs='?',
                         type=str, help='The path to the data', required=True)
     parser.add_argument('-v', '--verbose', nargs='?',
-                        help='to verbose or not to verbose', type=str2bool, default=False)
+                        help='to verbose or not to verbose', type=str2bool, default=True)
     parser.add_argument('-rn', '--run_number', nargs='?', type=int,
                         help='The number of the run (for variance)', default=0)
     parser.add_argument('-ds', '--dataset', nargs='?', type=str, help='dataset to choose',
@@ -192,28 +191,32 @@ if __name__ == '__main__':
     # Load data
     logger.info('Doing dataset {}'.format(args.dataset))
     distances = load_data(args.dataset, args.data_path)
+    results['distances'] = distances
 
     try:
         weights, losses,  deltas, errors, duration = train_distance_matrix(distances,
-                                                                 scale_delta=args.scale_delta,
-                                                                 distance_reg=args.distance_reg,
-                                                                 num_epochs=args.epochs,
-                                                                 batch_size=args.batch_size,
-                                                                 n_batches=args.n_batches,
-                                                                 learning_rate=args.learning_rate,
-                                                                 verbose=args.verbose,
-                                                                 gpu=args.gpu)
+                                                                           scale_delta=args.scale_delta,
+                                                                           distance_reg=args.distance_reg,
+                                                                           num_epochs=args.epochs,
+                                                                           batch_size=args.batch_size,
+                                                                           n_batches=args.n_batches,
+                                                                           learning_rate=args.learning_rate,
+                                                                           verbose=args.verbose,
+                                                                           gpu=args.gpu)
         results['weights'] = weights
         results['loss'] = losses
         results['deltas'] = deltas
         results['errors'] = errors
+        results['nan'] = False
 
     except NanError:
         logger.info('!!! Loss is Nan !!!')
         results['weights'] = torch.nan
-        results['loss'] = torch.nan
-        results['deltas'] = torch.nan
-        results['errors'] = torch.nan
+        results['loss'] = [torch.nan]
+        results['deltas'] = [torch.nan]
+        results['errors'] = [torch.nan]
+        results['nan'] = True
+        duration = 0
 
     with open(log_dir + '/res.pickle', 'wb') as handle:
         pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
