@@ -2,7 +2,7 @@
 # to use it python script_writer.py
 import itertools
 
-name_expe = 'test_expe'  # name for the experience
+name_expe = 'celegan'  # name for the experience
 name = 'expe_{0}'.format(name_expe)
 f = open('./launch_files/' + name + '.sh', "w")
 f.write('#!/bin/bash'+'\n')
@@ -27,7 +27,7 @@ datasets = ['celegan']
 # parallel = False
 
 
-learning_rates = [1e-1, 1e1]
+learning_rates = [1e-1]
 distance_regs = [10]
 scale_delta = [100]
 epochs = [2]

@@ -118,22 +118,20 @@ if __name__ == '__main__':
                         type=str, help='the path to the directory of the experiments', required=True)
     parser.add_argument('-re', '--expe_folder', nargs='?',
                         type=str, help='the name of the expe folder in the directory', required=True)
-    parser.add_argument('-n', '--num_nodes', nargs='?', type=int,
-                        help='Number of nodes in the data', required=True)
     parser.add_argument('-s', '--seed', nargs='?', type=int,
                         help='Seed for the perf (graines)', default=42)
     parser.add_argument('-ng', '--n_graines', nargs='?', type=int,
                         help='Number of graines', default=100)
 
     args = parser.parse_args()
-    num_nodes = args.num_nodes
     np.random.seed(args.seed)
-    indices = np.random.choice(args.num_nodes, size=100, replace=False)
     path = args.dir
     expe_folder = args.expe_folder
 
     with open(path+expe_folder+'/res.pickle', 'rb') as f:
         res = pickle.load(f)
+    num_nodes = res['distances'].shape[0]
+    indices = np.random.choice(num_nodes, size=args.n_graines, replace=False)
 
     the_scores = scores(res, indices)
     score_dict = dict(zip(score_fields, the_scores)) if the_scores else {}

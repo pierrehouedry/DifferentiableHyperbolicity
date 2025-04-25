@@ -1,7 +1,7 @@
 # %%
 import os
 
-dataset_n_nodes = {'celegan': 452}
+# dataset_n_nodes = {'celegan': 452}
 parallel = False
 dataset = 'celegan'
 result_path = './results_expes/expe_test_expe/'  # do not forget / in the end
@@ -24,10 +24,10 @@ for root, dirs, files in os.walk(result_path):
             print(expe_name)
             if parallel:
                 f.write(
-                    'python ../read_results.py  -r {0} -re {1} -n {2} &'.format(modified_path, expe_name, dataset_n_nodes[dataset])+'\n')
+                    'python ../read_results.py  -r {0} -re {1} &'.format(modified_path, expe_name)+'\n')
             else:
                 f.write(
-                    'python ../read_results.py  -r {0} -re {1} -n {2} '.format(modified_path, expe_name, dataset_n_nodes[dataset])+'\n')
+                    'python ../read_results.py  -r {0} -re {1} '.format(modified_path, expe_name)+'\n')
             counter += 1
             overallcounter += 1
             if counter == nb_group:
