@@ -1,5 +1,6 @@
 hyperbolicity.egg-info/*
 *.pyc
+/hyperbolicity/tree_fitting_methods/__pycache__/*.pyc
 /hyperbolicity/expes/launch_files/*
 *.DS_Store
 /hyperbolicity/expes/results_expes/*
