@@ -34,7 +34,7 @@ epochs = [2]
 batch_size = [(32, 100)]
 run_numbers = [0]  # for variance
 nb_group = 10  # number of jobs in // on the same machine
-gpu = False
+gpu = True
 parallel = False """
 
 if parallel and gpu:

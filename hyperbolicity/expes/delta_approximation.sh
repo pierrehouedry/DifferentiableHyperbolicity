@@ -1,8 +1,7 @@
 #!/bin/bash
 #SBATCH --gres gpu:1
-#SBATCH --mem 32G
-#SBATCH -c 1
-#SBATCH -w sn4
+#SBATCH --cpus-per-gpu=16
+#SBATCH -C m16
 
 conda activate base
 
