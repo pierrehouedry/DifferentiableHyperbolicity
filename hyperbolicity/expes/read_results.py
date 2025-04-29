@@ -22,7 +22,6 @@ import argparse
 class NanError(Exception):
     pass
 
-
 score_fields = [
     "n_epochs",
     "intermediate_distortion",
@@ -30,26 +29,20 @@ score_fields = [
     "mean_optim_l1",
     "min_optim_l1",
     "std_optim_l1",
-    "mean_no_optim_l1",
-    "min_no_optim_l1",
-    "std_no_optim_l1",
     "mean_optim_distortion",
     "min_optim_distortion",
     "std_optim_distortion",
-    "mean_no_optim_distortion",
-    "min_no_optim_distortion",
-    "std_no_optim_distortion",
 ]
 
 
-def scores(res, indices):
+def scores(res, indices, distances):
     # indices = np.random.choice(num_nodes, size=100, replace=False)
 
     is_nan = res['nan']
     n_epochs_attained = len(res['loss'])
 
     if not is_nan:
-        D_gt = res['distances']
+        D_gt = distances
         weights = res['weights']
         num_nodes = D_gt.shape[0]
         edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
@@ -64,18 +57,11 @@ def scores(res, indices):
 
         optim_l1 = []
         optim_distortion = []
-        no_optim_l1 = []
-        no_optim_distortion = []
 
         for j in indices:
             T_hat = gromov_tree(D_hat_cpu, j)
-            T_gt = gromov_tree(D_gt_cpu, j)
-
             optim_distortion.append(np.abs(T_hat - D_gt_cpu).max())
             optim_l1.append(np.abs(T_hat - D_gt_cpu).sum() / denom)
-
-            no_optim_distortion.append(np.abs(T_gt - D_gt_cpu).max())
-            no_optim_l1.append(np.abs(T_gt - D_gt_cpu).sum() / denom)
 
         def stats(x): return (np.mean(x), np.min(x), np.std(x))
 
@@ -84,9 +70,7 @@ def scores(res, indices):
             intermediate_distortion,
             intermediate_l1,
             *stats(optim_l1),
-            *stats(no_optim_l1),
             *stats(optim_distortion),
-            *stats(no_optim_distortion)
         )
     else:
         return (
@@ -122,18 +106,40 @@ if __name__ == '__main__':
                         help='Seed for the perf (graines)', default=42)
     parser.add_argument('-ng', '--n_graines', nargs='?', type=int,
                         help='Number of graines', default=100)
+    
+    parser.add_argument('-ds', '--dataset', nargs='?', type=str,
+                        help='Name of the experiment', default='')
 
     args = parser.parse_args()
     np.random.seed(args.seed)
     path = args.dir
     expe_folder = args.expe_folder
+    dataset = args.dataset
+
+    base_path = '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/'
+
+    if dataset == 'celegan':
+        dataset_file = 'D_celegan.pkl'
+    elif dataset == 'phd':
+        dataset_file = 'D_csphd.pkl'
+    elif dataset == 'cora':
+        dataset_file = 'D_cora.pkl'
+    elif dataset == 'airport':
+        dataset_file = 'D_airport.pkl'
+    else:
+        raise ValueError(f"Unknown experiment name: {dataset}")
+
+    dataset_path = os.path.join(base_path, dataset_file)
+    with open(dataset_path, 'rb') as f:
+        distances = pickle.load(f)
+    distances = torch.tensor(distances)
 
     with open(path+expe_folder+'/res.pickle', 'rb') as f:
         res = pickle.load(f)
-    num_nodes = res['distances'].shape[0]
+    num_nodes = distances.shape[0]
     indices = np.random.choice(num_nodes, size=args.n_graines, replace=False)
 
-    the_scores = scores(res, indices)
+    the_scores = scores(res, indices, distances)
     score_dict = dict(zip(score_fields, the_scores)) if the_scores else {}
     full_score = {key: score_dict.get(key, np.nan) for key in score_fields}
 
@@ -149,61 +155,3 @@ if __name__ == '__main__':
     df.to_csv(path+expe_folder+"/hyperbolicity_results.csv", index=False, float_format="%.6f")
     print('---- Done ----')
 
-
-# base_folder = "/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/results_expes/expe_celegan_gpu_batch_32/expe_celegan_gpu"
-# results = []
-
-# pattern = re.compile(
-#     r"learning_rate-(?P<learning_rate>[\d\.eE+-]+)(?=-distance_reg|-[a-zA-Z_]+=|\Z).*?"
-#     r"distance_reg-(?P<distance_reg>[\d\.eE+-]+)(?=-scale_delta|-[a-zA-Z_]+=|\Z).*?"
-#     r"scale_delta-(?P<scale_delta>[\d\.eE+-]+)(?=-|$)"
-# )
-
-# for root, dirs, files in os.walk(base_folder):
-#     for name in dirs:
-#         if name.startswith("launch_distance_hyperbolicity_learning"):
-#             folder_path = os.path.join(root, name)
-#             match = pattern.search(name)
-#             if not match:
-#                 print(f"Skipping (pattern mismatch): {name}")
-#                 continue
-
-#             scale_delta = float(match.group("scale_delta"))
-#             distance_reg = float(match.group("distance_reg"))
-#             learning_rate = float(match.group("learning_rate"))
-
-#             res_path = os.path.join(folder_path, "res.pickle")
-#             if os.path.exists(res_path):
-#                 try:
-#                     with open(res_path, 'rb') as f:
-#                         data = pickle.load(f)
-#                         values = scores(data)
-
-#                         score_dict = dict(zip(score_fields, values)) if values else {}
-#                         full_score = {key: score_dict.get(key, np.nan) for key in score_fields}
-
-#                         full_score.update({
-#                             "scale_delta": scale_delta,
-#                             "distance_reg": distance_reg,
-#                             "learning_rate": learning_rate,
-#                         })
-
-#                         results.append(full_score)
-#                         print(f"Processed: {folder_path}")
-#                 except Exception as e:
-#                     print(f" Error in {folder_path}: {e}")
-
-# df = pd.DataFrame(results)
-# df.to_csv("hyperbolicity_results.csv", index=False, float_format="%.6f")
-
-# if "mean_optim_distortion" in df.columns:
-#     best_row = df.loc[df["mean_optim_distortion"].idxmin()]
-#     print("\nBest Hyperparameters based on mean_optim_distortion:")
-#     print(f"  scale_delta       : {best_row['scale_delta']}")
-#     print(f"  distance_reg      : {best_row['distance_reg']}")
-#     print(f"  learning_rate     : {best_row['learning_rate']}")
-#     print(f"  n_epochs          : {int(best_row['n_epochs'])}")
-#     print(f"  mean_optim_distortion : {best_row['mean_optim_distortion']:.6f}")
-#     print(f"  mean_no_optim_distortion : {best_row['mean_no_optim_distortion']:.6f}")
-# else:
-#     print("Column 'mean_optim_distortion' not found in results.")

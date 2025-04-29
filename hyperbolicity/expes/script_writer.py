@@ -2,7 +2,7 @@
 # to use it python script_writer.py
 import itertools
 
-name_expe = 'cora'  # name for the experience
+name_expe = 'airport'  # name for the experience
 name = 'expe_{0}'.format(name_expe)
 f = open('./launch_files/' + name + '.sh', "w")
 f.write('#!/bin/bash'+'\n')
@@ -14,13 +14,13 @@ data_path = "../../datasets/"
 
 f.write('mkdir -p {0}'.format(results_path)+'\n')
 
-datasets = ['cora']
+datasets = ['airport']
 
-learning_rates = [1e-4, 1e-3, 1e-2, 1e-1]
-distance_regs = [1e-4, 1e-3, 1e-2, 1e-1, 0.1, 1.0, 10]
+learning_rates = [1e-3, 1e-2, 1e-1]
+distance_regs = [1e-3, 1e-2, 1e-1, 0.1, 1.0, 10]
 scale_delta = [1e-3, 1e-2, 1e-1, 1.0, 10, 100]
 epochs = [500]
-batch_size = [(8, 1000), (8, 10000), (16, 500), (16, 1000), (32, 50), (32, 100)]
+batch_size = [(32, 100)]
 run_numbers = [0]  # for variance
 nb_group = 10  # number of jobs in // on the same machine
 gpu = True

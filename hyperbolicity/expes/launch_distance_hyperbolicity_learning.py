@@ -5,7 +5,7 @@ import torch
 import torch.optim as optim
 import networkx as nx
 from tqdm import tqdm
-from hyperbolicity.delta import compute_hyperbolicity_batch, compute_delta_from_distances_batched
+from hyperbolicity.delta import compute_hyperbolicity_batch, compute_delta_from_distances_batched, delta_hyperbolicity_fixed_basepoint
 from hyperbolicity.utils import str2bool, setup_logger, soft_max, floyd_warshall, soft_max, construct_weighted_matrix, make_batches, create_log_dir
 import pickle
 import os
@@ -84,9 +84,10 @@ def train_distance_matrix(distances: torch.Tensor,
 
     def loss_fn(w):
         update_dist = construct_weighted_matrix(w, num_nodes, edges)
-        M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
+        #M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
 
-        delta = soft_max(compute_delta_from_distances_batched(M_batch, scale=scale_delta), scale=scale_delta)
+        #delta = soft_max(compute_delta_from_distances_batched(M_batch, scale=scale_delta), scale=scale_delta)
+        delta = delta_hyperbolicity_fixed_basepoint(update_dist, 0, scale_delta)
         err = (distances-update_dist).pow(2).mean()
 
         return delta + distance_reg*err, delta, err
@@ -177,7 +178,6 @@ if __name__ == '__main__':
     logger.info('############ Machine = {} ############ \n'.format(socket.gethostname()))
 
     results = {}  # dictionnary of results
-    results['dataset'] = args.dataset
     results['learning_rate'] = args.learning_rate
     results['distance_reg'] = args.distance_reg
     results['run_number'] = args.run_number
@@ -221,49 +221,4 @@ if __name__ == '__main__':
         pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
     logger.info(f'Duration of expe: {duration}s')
     logger.info('The result dict is saved.')
-    logger.info('############ It is over DUDE ############')
-
-
-# def train_distance_matrix(distances: torch.Tensor,
-#                           scale_sp: float,
-#                           scale_delta: float,
-#                           scale_soft_max: float,
-#                           distance_reg: float,
-#                           num_epochs: int,
-#                           batch_size: int,
-#                           learning_rate: float,
-#                           verbose: bool):
-
-#     num_nodes = distances.shape[0]
-#     edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
-#     upper_adjency = torch.triu(distances, diagonal=1).type(torch.float32)
-#     weights_opt = upper_adjency[upper_adjency != 0].requires_grad_(True)
-#     optimizer = optim.Adam([weights_opt], lr=learning_rate)
-#     losses = []
-#     deltas = []
-#     errors = []
-
-#     def loss_fn(w):
-#         batch_indices = sample_batch_indices(num_nodes, 32)
-#         M_batch = batched_datasp_submatrices(w, num_nodes, edges, batch_indices, beta=scale_sp)
-#         print('done sp batch')
-#         delta = soft_max(compute_hyperbolicity_batch(M_batch, scale=scale_delta), scale=scale_soft_max)
-#         true_batches = torch.stack([distances[idx[:, None], idx] for idx in batch_indices])
-#         err = (M_batch - true_batches).pow(2).mean()
-
-#         return delta + distance_reg*err, delta, err
-
-#     with tqdm(range(num_epochs), desc="Training Weights", disable=not verbose) as pbar:
-#         for epoch in pbar:
-#             optimizer.zero_grad()
-#             loss, delta, err = loss_fn(weights_opt)
-#             pbar.set_description('loss = {0:.5f}'.format(loss.item()))
-#             if torch.isnan(loss):
-#                 raise NanError('Loss is Nan')
-#             losses.append(loss.item())
-#             deltas.append(delta.item())
-#             errors.append(err.item())
-#             loss.backward()
-#             optimizer.step()
-
-#     return weights_opt.detach().clone(), losses, deltas, errors
+    logger.info('############ It is over ############')
