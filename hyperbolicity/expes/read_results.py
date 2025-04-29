@@ -137,12 +137,12 @@ if __name__ == '__main__':
     score_dict = dict(zip(score_fields, the_scores)) if the_scores else {}
     full_score = {key: score_dict.get(key, np.nan) for key in score_fields}
 
-    # Find all matches
-    pattern = r'([a-zA-Z_]+)-([0-9\.]+|[a-zA-Z_]+)'
-    matches = re.findall(pattern, expe_folder)
-    # Convert matches to a dictionary
-    parsed_dict = {key: (float(value) if '.' in value else int(value) if value.isdigit() else value)
-                   for key, value in matches}
+    hyperparams_names = ['run_number', 'dataset', 'learning_rate',
+                         'distance_reg', 'scale_delta', 'epochs', 'batch_size', 'n_batches', 'gpu']
+    parsed_dict = {}
+    for hyperparam in hyperparams_names:
+        parsed_dict[hyperparam] = res[hyperparam]
+
     full_score.update(parsed_dict)
 
     df = pd.DataFrame([full_score])

@@ -34,9 +34,9 @@ def gromov_tree(distance_matrix, root):
     n = distance_matrix.shape[0]
     d_root = distance_matrix[root]
     d_max = d_root.max()
-    
+
     gp = np.tile(d_root, (n, 1)) + np.tile(d_root.reshape(n, 1), (1, n)) - distance_matrix
-    gp /= 2.0
+    gp = gp/2.0
 
     d_U = d_max - gp
     np.fill_diagonal(d_U, 0)
