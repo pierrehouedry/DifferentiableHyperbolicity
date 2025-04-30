@@ -1,0 +1,7 @@
+learning_rates: [0.01]
+distance_regs: [0.001]
+scale_delta: [10.0]
+epochs: [1000]
+batch_size: [[32, 100]]
+dataset: '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/D_celegan.pkl'
+

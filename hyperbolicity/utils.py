@@ -1,10 +1,4 @@
 import torch
-import os
-import datetime
-import logging
-import argparse
-from dateutil import tz
-
 
 def logsumexp(x: torch.Tensor, dim: int) -> torch.Tensor:
     # Tricks here: log(sum(exp(x))) = log(sum(exp(x - m)*exp(m))) = log(exp(m)*sum(exp(x - m))) = m + log(sum(exp(x - m)))
@@ -69,20 +63,6 @@ def datasp(weights: torch.Tensor, num_nodes, edges, beta: float = 1.0) -> torch.
     return weighted_matrix
 
 
-# def sample_batch_indices(N: int, size_batches: int = 32, nb_batches: int = 32, device: str = 'cpu'):
-#     """
-#     Randomly samples node indices to create batches.
-#     """
-#     all_indices = torch.arange(N, device=device)
-#     batches = []
-#     for _ in range(nb_batches):
-#         permuted = all_indices[torch.randperm(N)]
-#         selected = permuted[:size_batches]
-#         batches.append(selected)
-
-#     return batches
-
-
 def construct_weighted_matrix(weights: torch.Tensor, num_nodes: int, edges: torch.Tensor) -> torch.Tensor:
     """
     Constructs a weighted adjacency matrix from given edge weights.
@@ -93,53 +73,18 @@ def construct_weighted_matrix(weights: torch.Tensor, num_nodes: int, edges: torc
 
     return weighted_matrix
 
-
-def create_log_dir(FLAGS, add_name=None):
-    now = datetime.datetime.now(tz.tzlocal())
-    timestamp = now.strftime('%Y_%m_%d_%H_%M_%S')
-    if add_name is not None:
-        log_dir = FLAGS.log_dir + 'launch_distance_hyperbolicity_learning' + "_" + timestamp + add_name
-    else:
-        log_dir = FLAGS.log_dir + 'launch_distance_hyperbolicity_learning' + "_" + timestamp
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    # save command line arguments
-    with open(log_dir + "/hyperparameters_" + timestamp + ".csv", "w") as f:
-        for arg in FLAGS.__dict__:
-            f.write(arg + "," + str(FLAGS.__dict__[arg]) + "\n")
-
-    return log_dir
-
-
-def setup_logger(name, log_file, level=logging.INFO):
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-
-    handler = logging.FileHandler(log_file)
-    handler.setFormatter(formatter)
-
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.addHandler(handler)
-
-    return logger
-
-
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
-def soft_min(x: torch.Tensor, scale: float = 1000, dim=-1) -> torch.Tensor:
-    return soft_max(x, scale=-scale, dim=dim)
-
-
 def floyd_warshall(adj_matrix):
+    """
+    Implements the Floyd-Warshall algorithm to compute the shortest paths between all pairs of nodes in a graph.
 
+    Parameters:
+        adj_matrix (torch.Tensor): A (N x N) adjacency matrix representing the graph. 
+                                   The value at (i, j) represents the weight of the edge from node i to node j.
+                                   Use float('inf') for no direct edge between nodes.
+
+    Returns:
+        torch.Tensor: A (N x N) matrix where the value at (i, j) represents the shortest path distance from node i to node j.
+    """
     N = adj_matrix.size(0)
     dist = adj_matrix.clone()
     for k in range(N):

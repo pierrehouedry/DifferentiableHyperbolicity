@@ -1,0 +1,54 @@
+% This file was created with tikzplotlib v0.10.1.
+\begin{tikzpicture}
+
+\definecolor{cornflowerblue86180233}{RGB}{86,180,233}
+\definecolor{darkcyan0114178}{RGB}{0,114,178}
+\definecolor{darkgray176}{RGB}{176,176,176}
+
+\begin{axis}[
+tick align=outside,
+tick pos=left,
+title={Mean Optim Distortion vs Scale Delta},
+x grid style={darkgray176},
+xlabel={Scale Delta},
+xmajorgrids,
+xmin=-2.395, xmax=52.495,
+xtick style={color=black},
+y grid style={darkgray176},
+ylabel={Mean Optim Distortion},
+ymajorgrids,
+ymin=1.8314632754868, ymax=3.32234228338407,
+ytick style={color=black}
+]
+\path [draw=cornflowerblue86180233, fill=cornflowerblue86180233, opacity=0.3]
+(axis cs:0.1,3.10492951694469)
+--(axis cs:0.1,3.06941013130207)
+--(axis cs:1,2.17260693812923)
+--(axis cs:5,1.91499074912319)
+--(axis cs:10,1.89923050311849)
+--(axis cs:15,1.97750940372887)
+--(axis cs:20,2.33472526583911)
+--(axis cs:50,3.1791118586916)
+--(axis cs:50,3.25457505575237)
+--(axis cs:50,3.25457505575237)
+--(axis cs:20,2.60321033921002)
+--(axis cs:15,2.05935913417397)
+--(axis cs:10,1.95230400844767)
+--(axis cs:5,2.01846312069645)
+--(axis cs:1,2.22326405167027)
+--(axis cs:0.1,3.10492951694469)
+--cycle;
+
+\addplot [semithick, darkcyan0114178, mark=*, mark size=3, mark options={solid}]
+table {%
+0.1 3.08716982412338
+1 2.19793549489975
+5 1.96672693490982
+10 1.92576725578308
+15 2.01843426895142
+20 2.46896780252457
+50 3.21684345722199
+};
+\end{axis}
+
+\end{tikzpicture}

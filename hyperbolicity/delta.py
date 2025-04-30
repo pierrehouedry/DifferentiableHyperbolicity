@@ -30,9 +30,62 @@ def compute_hyperbolicity(M, scale=0):
         return soft_max(delta, scale, dim=(0, 1, 2, 3))
     else:
         return torch.max(delta)
+    
+
+def compute_delta_from_distances_batched(dist_matrices: torch.Tensor, scale: float) -> torch.Tensor:         
+    """
+    Batched variant of ‘delta_from_distances’.
+
+    Parameters
+    ----------
+    dist_matrices : torch.Tensor
+        Pairwise distances for B graphs (shape: B × N × N).
+    scale : float
+        Temperature parameter in the soft-min / soft-max (must be non-zero).
+
+    Returns
+    -------
+    torch.Tensor
+        delta for each batch element (shape: B).
+    """
+    if dist_matrices.ndim != 3 or dist_matrices.size(-1) != dist_matrices.size(-2):
+        raise ValueError("`dist_matrices` must have shape (B, N, N).")
+
+    B, N, _ = dist_matrices.shape
+    device = dist_matrices.device
+
+    # Pre-compute the quadruple index grid *once* and broadcast across the batch
+    #   idx.shape = (4, N⁴)
+    idx = torch.cartesian_prod(*(torch.arange(N, device=device) for _ in range(4))).T
+    i_idx, j_idx, k_idx, l_idx = idx             # (N⁴,)
+
+    # Gather all pairwise distances needed for the three Gromov products.
+    # Each gather creates a tensor of shape (B, N⁴)
+    d_il = dist_matrices[:, i_idx, l_idx]
+    d_jl = dist_matrices[:, j_idx, l_idx]
+    d_kl = dist_matrices[:, k_idx, l_idx]
+    d_ij = dist_matrices[:, i_idx, j_idx]
+    d_jk = dist_matrices[:, j_idx, k_idx]
+    d_ik = dist_matrices[:, i_idx, k_idx]
+
+    gp_01_3 = (d_il + d_jl - d_ij) / 2           # (B, N⁴)
+    gp_12_3 = (d_jl + d_kl - d_jk) / 2
+    gp_02_3 = (d_il + d_kl - d_ik) / 2
+
+    # Soft-min over {gp_01_3, gp_12_3}
+    minimum   = torch.stack((gp_01_3, gp_12_3), dim=-1)      # (B, N⁴, 2)
+    soft_min  = soft_max(minimum, -scale)           # (B, N⁴)
+
+    # Δ₍i,j,k,l₎  =  soft-min(gp_01_3, gp_12_3)  −  gp_02_3
+    delta_ijkl = soft_min - gp_02_3                           # (B, N⁴)
+
+    # Finally take the soft-max (log-sum-exp) over all quadruples
+    delta = soft_max(delta_ijkl,  scale, dim=-1)     # (B,)
+
+    return delta
 
 
-def compute_hyperbolicity_batch(M_batch, scale=0):
+def compute_hyperbolicity_4points_batch(M_batch, scale=0):
     """
     Computes delta-hyperbolicity over a batch of distance matrices using the 4-point condition.
 
@@ -198,55 +251,3 @@ def delta_hyperbolicity_fixed_basepoint2(metric, base_point, alpha, soft=True):
             max_logsumexp = torch.max(logsumexp_value)
 
     return max_logsumexp / alpha
-
-def compute_delta_from_distances_batched(dist_matrices: torch.Tensor, scale: float) -> torch.Tensor:         
-    """
-    Batched variant of ‘delta_from_distances’.
-
-    Parameters
-    ----------
-    dist_matrices : torch.Tensor
-        Pairwise distances for B graphs (shape: B × N × N).
-    scale : float
-        Temperature parameter in the soft-min / soft-max (must be non-zero).
-
-    Returns
-    -------
-    torch.Tensor
-        delta for each batch element (shape: B).
-    """
-    if dist_matrices.ndim != 3 or dist_matrices.size(-1) != dist_matrices.size(-2):
-        raise ValueError("`dist_matrices` must have shape (B, N, N).")
-
-    B, N, _ = dist_matrices.shape
-    device = dist_matrices.device
-
-    # Pre-compute the quadruple index grid *once* and broadcast across the batch
-    #   idx.shape = (4, N⁴)
-    idx = torch.cartesian_prod(*(torch.arange(N, device=device) for _ in range(4))).T
-    i_idx, j_idx, k_idx, l_idx = idx             # (N⁴,)
-
-    # Gather all pairwise distances needed for the three Gromov products.
-    # Each gather creates a tensor of shape (B, N⁴)
-    d_il = dist_matrices[:, i_idx, l_idx]
-    d_jl = dist_matrices[:, j_idx, l_idx]
-    d_kl = dist_matrices[:, k_idx, l_idx]
-    d_ij = dist_matrices[:, i_idx, j_idx]
-    d_jk = dist_matrices[:, j_idx, k_idx]
-    d_ik = dist_matrices[:, i_idx, k_idx]
-
-    gp_01_3 = (d_il + d_jl - d_ij) / 2           # (B, N⁴)
-    gp_12_3 = (d_jl + d_kl - d_jk) / 2
-    gp_02_3 = (d_il + d_kl - d_ik) / 2
-
-    # Soft-min over {gp_01_3, gp_12_3}
-    minimum   = torch.stack((gp_01_3, gp_12_3), dim=-1)      # (B, N⁴, 2)
-    soft_min  = soft_max(minimum, -scale)           # (B, N⁴)
-
-    # Δ₍i,j,k,l₎  =  soft-min(gp_01_3, gp_12_3)  −  gp_02_3
-    delta_ijkl = soft_min - gp_02_3                           # (B, N⁴)
-
-    # Finally take the soft-max (log-sum-exp) over all quadruples
-    delta = soft_max(delta_ijkl,  scale, dim=-1)     # (B,)
-
-    return delta
