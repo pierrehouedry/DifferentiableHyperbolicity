@@ -68,7 +68,7 @@ def main(config: GridSearchConfig):
     print(f"Dataset loaded successfully from {config.dataset}")
 
     # Convert dataset to torch float32
-    distances = torch.tensor(dataset, dtype=torch.float32)
+    distances = torch.tensor(dataset, dtype=torch.float64)
 
     # Generate the folder name once based on a timestamp
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')

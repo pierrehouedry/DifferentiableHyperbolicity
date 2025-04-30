@@ -1,5 +1,5 @@
-learning_rates: [0.01]
-distance_regs: [0.001]
+learning_rates: [0.1]
+distance_regs: [0.0001, 0.001, 0.01, 0.1, 1, 10]
 scale_delta: [10.0]
 epochs: [1000]
 batch_size: [[32, 100]]

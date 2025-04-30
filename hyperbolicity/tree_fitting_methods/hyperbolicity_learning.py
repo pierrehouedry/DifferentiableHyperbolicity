@@ -36,15 +36,15 @@ def train_distance_matrix(distances: torch.Tensor,
     def projection(weight, num_nodes, edges):
         update_dist = construct_weighted_matrix(weight, num_nodes, edges)
         update_dist = floyd_warshall(update_dist)
-
-        return torch.triu(update_dist, diagonal=1)[torch.triu(update_dist, diagonal=1) != 0]  # , pairs
+        
+        return update_dist[edges[0], edges[1]]
 
     def loss_fn(w):
         update_dist = construct_weighted_matrix(w, num_nodes, edges)
         M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
         delta = soft_max(compute_delta_from_distances_batched(M_batch, scale=scale_delta), scale=scale_delta)
         err = (distances-update_dist).pow(2).mean()
-        
+
         return delta + distance_reg*err, delta, err
 
     patience = 50
@@ -63,8 +63,8 @@ def train_distance_matrix(distances: torch.Tensor,
             errors.append(err.item())
             loss.backward()
             optimizer.step()
-
             with torch.no_grad():
+                weights_opt.data[weights_opt.data<0] = 0
                 weights_opt.data = projection(weights_opt, num_nodes, edges)
 
             if loss.item() < best_loss:
@@ -78,4 +78,5 @@ def train_distance_matrix(distances: torch.Tensor,
                 pbar.set_description("Early stopping triggered")
                 break
     end = time.time()
+    print(best_weights.shape)
     return best_weights, losses, deltas, errors, end-start
