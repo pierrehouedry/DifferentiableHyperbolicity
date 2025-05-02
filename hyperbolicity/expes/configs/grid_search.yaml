@@ -1,7 +1,7 @@
-learning_rates: [0.1]
-distance_regs: [0.0001, 0.001, 0.01, 0.1, 1, 10]
-scale_delta: [10.0]
+learning_rates: [0.1, 0.01, 0.001]
+distance_regs: [0.1, 0.01, 1]
+scale_delta: [0.01, 0.1, 1.0, 10.0]
 epochs: [1000]
-batch_size: [[32, 100]]
-dataset: '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/D_celegan.pkl'
+batch_size: [[32,100]]
+dataset: '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/D_airport.pkl'
 
