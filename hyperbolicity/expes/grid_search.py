@@ -70,6 +70,14 @@ def main(config: GridSearchConfig):
     # Convert dataset to torch float32
     distances = torch.tensor(dataset, dtype=torch.float64)
 
+    #####
+    new_row = torch.full((1, distances.shape[1]), 20)
+    distances = torch.cat((distances, new_row), dim=0)
+    new_column = torch.full((distances.shape[0], 1), 20)
+    distances = torch.cat((distances, new_column), dim=1)
+    distances[-1,-1] = 0
+    #####
+
     # Generate the folder name once based on a timestamp
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     folder_name = f"results_expes/{config.dataset.split('/')[-1].split('.')[0]}_{timestamp}/"
@@ -135,6 +143,7 @@ def main(config: GridSearchConfig):
             num_nodes = distances.shape[0]
             np.random.seed(42)
             indices = np.random.choice(num_nodes, 100, replace=False)
+            indices = [num_nodes-1]*5
             #denom = num_nodes * (num_nodes - 1)
             edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
             distance_optimized = construct_weighted_matrix(best_weights, num_nodes, edges)

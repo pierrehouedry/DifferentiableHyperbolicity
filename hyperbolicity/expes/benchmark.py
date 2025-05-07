@@ -12,9 +12,9 @@ import pickle
 from torch_geometric.datasets import AttributedGraphDataset
 
 
-dataset ='wiki'
+dataset ='zeisel'
 num_expe = 100
-dataset_path = '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/D_wiki.pkl'
+dataset_path = '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/D_zeisel.pkl'
 
 with open(dataset_path, 'rb') as f:
     distances = pickle.load(f)
@@ -69,7 +69,7 @@ with open(f'/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolici
 l1 = []
 distortion = []
 
-for j in indices:
+for _ in range(num_expe):
     tree_TR = TreeRep(distances)
     tree_TR.learn_tree()
     distances_tr = nx.floyd_warshall_numpy(tree_TR.G)[:num_nodes, :num_nodes]
@@ -87,8 +87,9 @@ with open(f'/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolici
     result_file.write(f"Average L1: {avg_l1:.4f} ± {std_l1:.4f}\n")
     result_file.write(f"Average Distortion: {avg_distortion:.4f} ± {std_distortion:.4f}\n")
     result_file.write('==========================\n')
+    
 
-# Load Dataset and Extract Largest Connected Component
+""" # Load Dataset and Extract Largest Connected Component
 dataset = AttributedGraphDataset(
     '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets', 
     name='Wiki'
@@ -122,4 +123,4 @@ with open(f'/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolici
     result_file.write('== LAYERING TREE RESULTS ==\n')
     result_file.write(f"Average L1: {avg_l1:.4f} ± {std_l1:.4f}\n")
     result_file.write(f"Average Distortion: {avg_distortion:.4f} ± {std_distortion:.4f}\n")
-    result_file.write('==========================\n')
+    result_file.write('==========================\n') """
