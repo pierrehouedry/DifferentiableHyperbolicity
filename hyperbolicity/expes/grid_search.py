@@ -135,7 +135,7 @@ def main(config: GridSearchConfig):
             num_nodes = distances.shape[0]
             np.random.seed(42)
             indices = np.random.choice(num_nodes, 100, replace=False)
-            denom = num_nodes * (num_nodes - 1)
+            #denom = num_nodes * (num_nodes - 1)
             edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
             distance_optimized = construct_weighted_matrix(best_weights, num_nodes, edges)
             intermediate_distortion = torch.abs(distance_optimized - distances).max().item()
@@ -147,7 +147,7 @@ def main(config: GridSearchConfig):
             for j in indices:
                 T_opt = gromov_tree(distance_optimized_cpu, j)
                 optim_distortion.append(np.abs(T_opt - distances_cpu).max())
-                optim_l1.append(np.abs(T_opt - distances_cpu).sum() / denom)
+                optim_l1.append(np.abs(T_opt - distances_cpu).mean())
 
             # Append results to csv
             with open(results_file, 'a') as f:

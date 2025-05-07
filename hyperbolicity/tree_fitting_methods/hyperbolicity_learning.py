@@ -78,5 +78,4 @@ def train_distance_matrix(distances: torch.Tensor,
                 pbar.set_description("Early stopping triggered")
                 break
     end = time.time()
-    print(best_weights.shape)
     return best_weights, losses, deltas, errors, end-start
