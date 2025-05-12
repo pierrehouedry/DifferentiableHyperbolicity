@@ -70,13 +70,13 @@ def main(config: GridSearchConfig):
     # Convert dataset to torch float32
     distances = torch.tensor(dataset, dtype=torch.float64)
 
-    #####
-    new_row = torch.full((1, distances.shape[1]), 20)
+    
+    """ new_row = torch.full((1, distances.shape[1]), 20)
     distances = torch.cat((distances, new_row), dim=0)
     new_column = torch.full((distances.shape[0], 1), 20)
     distances = torch.cat((distances, new_column), dim=1)
-    distances[-1,-1] = 0
-    #####
+    distances[-1,-1] = 0 """
+
 
     # Generate the folder name once based on a timestamp
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -141,14 +141,13 @@ def main(config: GridSearchConfig):
 
             # Compute scores
             num_nodes = distances.shape[0]
+            denom = num_nodes*(num_nodes-1)
             np.random.seed(42)
             indices = np.random.choice(num_nodes, 100, replace=False)
-            indices = [num_nodes-1]*5
-            #denom = num_nodes * (num_nodes - 1)
             edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
             distance_optimized = construct_weighted_matrix(best_weights, num_nodes, edges)
             intermediate_distortion = torch.abs(distance_optimized - distances).max().item()
-            intermediate_l1 = torch.abs(distance_optimized - distances).mean().item()
+            intermediate_l1 = (torch.abs(distance_optimized - distances).sum()/denom).item()
             optim_l1 = []
             optim_distortion = []
             distance_optimized_cpu = distance_optimized.cpu().numpy()
@@ -156,7 +155,7 @@ def main(config: GridSearchConfig):
             for j in indices:
                 T_opt = gromov_tree(distance_optimized_cpu, j)
                 optim_distortion.append(np.abs(T_opt - distances_cpu).max())
-                optim_l1.append(np.abs(T_opt - distances_cpu).mean())
+                optim_l1.append(np.abs(T_opt - distances_cpu).sum()/denom)
 
             # Append results to csv
             with open(results_file, 'a') as f:

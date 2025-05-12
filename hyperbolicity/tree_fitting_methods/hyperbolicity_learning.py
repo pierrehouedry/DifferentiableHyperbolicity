@@ -66,7 +66,9 @@ def train_distance_matrix(distances: torch.Tensor,
             with torch.no_grad():
                 weights_opt.data[weights_opt.data<0] = 0
                 weights_opt.data = projection(weights_opt, num_nodes, edges)
-
+                """ if epoch % 20 == 0:
+                    save_path = f"/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/expes/results_expes/evoluiton_of_weights/weights_epoch_{epoch}.pt"
+                    torch.save(weights_opt.detach().cpu(), save_path) """
             if loss.item() < best_loss:
                 best_loss = loss.item()
                 best_weights = weights_opt.detach().clone().cpu()

@@ -295,7 +295,7 @@ class TreeRep():
 
         start = time.time()
 
-        self.W = np.zeros((self.S,self.S), dtype = self.d.dtype)
+        self.W = np.zeros((self.S,self.S))
         self.W[:self.n,:self.n] = self.d
 
         p = np.random.permutation(self.n)
