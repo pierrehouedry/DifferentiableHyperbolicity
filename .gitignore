@@ -1,18 +1,28 @@
-hyperbolicity.egg-info/*
-*.pyc
-/hyperbolicity/tree_fitting_methods/__pycache__/*.pyc
-/hyperbolicity/expes/launch_files/*
+# Ignore all __pycache__ folders and .pyc files recursively
+**/__pycache__/
+**/*.pyc
+
+# Ignore all egg-info directories
+*.egg-info/
+hyperbolicity.egg-info/
+
+# Ignore all .DS_Store files
 *.DS_Store
-/hyperbolicity/expes/results_expes/*
-hyperbolicity/tree_fitting_methods/__pycache__/gromov.cpython-312.pyc
-hyperbolicity/tree_fitting_methods/__pycache__/hccfit.cpython-312.pyc
-hyperbolicity/tree_fitting_methods/__pycache__/neighbor_joining.cpython-312.pyc
-hyperbolicity/tree_fitting_methods/__pycache__/treerep.cpython-312.pyc
-hyperbolicity/expes/figures/fig1.pdf
-hyperbolicity/tree_fitting_methods/hyperbolicity_learning_GW.py
-hyperbolicity/expes/launch_files/results_expes/*
+
+# Ignore all results, figures, launch files, and datasets
+hyperbolicity/expes/results_expes/
+hyperbolicity/expes/figures/
+hyperbolicity/expes/launch_files/
+hyperbolicity/datasets/
+
+# Ignore specific notebooks and scripts
 hyperbolicity/expes/figures/figure_Tree_fiitingGW.ipynb
 hyperbolicity/expes/classification.ipynb
 hyperbolicity/expes/single_cell_classification.ipynb
 hyperbolicity/expes/single_cell.ipynb
-hyperbolicity/datasets/*hyperbolicity/datasets/
+hyperbolicity/tree_fitting_methods/hyperbolicity_learning_GW.py
+
+# Exclude all files in datasets except D_celegan.pkl
+!hyperbolicity/datasets/D_celegan.pkl
+!hyperbolicity/datasets/D_csphd.pkl
+hyperbolicity/datasets/*
