@@ -172,7 +172,7 @@ if 'treerep' in methods:
         result_file.write(f"Average Time: {np.mean(elapsed_time):.4f} ± {np.std(elapsed_time):.4f}\n")
         result_file.write('==========================\n')
 
-if 'layering' in methods and dataset not in ['zeisel', 'cbmc']:
+if 'layering' in methods and dataset not in ['zeisel', 'cbmc', 'microbiote']:
     l1 = []
     distortion = []
     elapsed_time = []

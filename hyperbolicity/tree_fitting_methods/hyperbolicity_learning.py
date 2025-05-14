@@ -23,6 +23,7 @@ def train_distance_matrix(distances: torch.Tensor,
     if gpu:
         distances = distances.to('cuda')
 
+    K = int(np.ceil(n_batches/32))
     num_nodes = distances.shape[0]
     edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
     upper_adjency = torch.triu(distances, diagonal=1).type(torch.float32)
@@ -41,9 +42,12 @@ def train_distance_matrix(distances: torch.Tensor,
 
     def loss_fn(w):
         update_dist = construct_weighted_matrix(w, num_nodes, edges)
-        M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=n_batches)
-        delta = soft_max(compute_delta_from_distances_batched(M_batch, scale=scale_delta), scale=scale_delta)
+        for _ in range(K):
+            M_batch = make_batches(update_dist, size_batches=batch_size, nb_batches=32)
+            delta = soft_max(compute_delta_from_distances_batched(M_batch, scale=scale_delta), scale=scale_delta)
+            delta.backward(delta, retain_graph=True)
         err = (distances-update_dist).pow(2).mean()
+        (distance_reg*err).backward()
 
         return delta + distance_reg*err, delta, err
 
@@ -56,12 +60,11 @@ def train_distance_matrix(distances: torch.Tensor,
         for epoch in pbar:
             optimizer.zero_grad()
             loss, delta, err = loss_fn(weights_opt)
-
             pbar.set_description(f"loss = {loss.item():.5f}, delta = {delta:.5f}, error = {err:.5f}")
             losses.append(loss.item())
             deltas.append(delta.item())
             errors.append(err.item())
-            loss.backward()
+            #loss.backward()
             optimizer.step()
             with torch.no_grad():
                 weights_opt.data[weights_opt.data<0] = 0

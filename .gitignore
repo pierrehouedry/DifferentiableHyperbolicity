@@ -9,3 +9,10 @@ hyperbolicity/tree_fitting_methods/__pycache__/hccfit.cpython-312.pyc
 hyperbolicity/tree_fitting_methods/__pycache__/neighbor_joining.cpython-312.pyc
 hyperbolicity/tree_fitting_methods/__pycache__/treerep.cpython-312.pyc
 hyperbolicity/expes/figures/fig1.pdf
+hyperbolicity/tree_fitting_methods/hyperbolicity_learning_GW.py
+hyperbolicity/expes/launch_files/results_expes/*
+hyperbolicity/expes/figures/figure_Tree_fiitingGW.ipynb
+hyperbolicity/expes/classification.ipynb
+hyperbolicity/expes/single_cell_classification.ipynb
+hyperbolicity/expes/single_cell.ipynb
+hyperbolicity/datasets/*hyperbolicity/datasets/

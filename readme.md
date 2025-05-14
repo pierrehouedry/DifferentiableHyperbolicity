@@ -1,0 +1,74 @@
+# DifferentiableHyperbolicity
+
+A Python library for computing and optimizing tree metrics using differentiable hyperbolicity. This repository implements various tree fitting methods and provides tools for analyzing graph hyperbolicity.
+
+## Installation
+
+Install the package using pip:
+
+```bash
+pip install -e .
+```
+
+## Features
+
+- Multiple tree fitting algorithms:
+  - Neighbor Joining (NJ)
+  - TreeRep
+  - HCC (Hierarchical Clustering)
+  - Gromov Tree Construction
+  - Layering Tree Approximation
+  - HDTree (our differentiable method)
+
+- Graph analysis tools:
+  - Hyperbolicity computation
+  - Distance matrix manipulation
+  - Tree metric optimization
+
+## Usage Examples
+
+```python
+import numpy as np
+import networkx as nx
+from hyperbolicity.tree_fitting_methods.neighbor_joining import NJ
+from hyperbolicity.tree_fitting_methods.hdtree import hdtree
+from hyperbolicity.tree_fitting_methods.treerep import TreeRep
+
+# Create a distance matrix from your graph
+graph = nx.random_geometric_graph(10, 0.5)
+distances = nx.floyd_warshall_numpy(graph)
+
+# Fit trees using different methods
+# Neighbor Joining
+tree_nj = NJ(distances)
+
+# TreeRep
+tree_TR = TreeRep(distances)
+tree_TR.learn_tree()
+
+# HDTree (our differentiable method)
+opt_tree = hdtree(torch.tensor(distances),
+                  root=0, 
+                  lr=0.1,
+                  scale_delta=1e-2, 
+                  distance_reg=1, 
+                  batch_size=10,
+                  n_batches=1, 
+                  num_epochs=2000)
+```
+
+## Repository Structure
+
+```
+.
+├── hyperbolicity/
+│   ├── delta.py            # Hyperbolicity computation
+│   ├── far_apart_points.py # Point selection algorithms
+│   ├── utils.py            # Utility functions
+│   ├── tree_fitting_methods/ # Different tree fitting implementations
+└── expes/                  # Experiments and analysis notebooks
+```
+
+## License
+
+This project is licensed under the MIT License.

@@ -1,7 +1,6 @@
-learning_rates: [0.01]
-distance_regs: [0.001]
-scale_delta: [0.001]
+learning_rates: [0.001]
+distance_regs: [0.1]
+scale_delta: [10.0]
 epochs: [1000]
-batch_size: [[32,100]]
-dataset: '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/D_cbmc.pkl'
-
+batch_size: [[32,1000], [32,3000], [32,5000]]
+dataset: '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/D_zeisel.pkl'
