@@ -23,6 +23,6 @@ hyperbolicity/expes/single_cell.ipynb
 hyperbolicity/tree_fitting_methods/hyperbolicity_learning_GW.py
 
 # Exclude all files in datasets except D_celegan.pkl
+hyperbolicity/datasets/*
 !hyperbolicity/datasets/D_celegan.pkl
 !hyperbolicity/datasets/D_csphd.pkl
-hyperbolicity/datasets/*
