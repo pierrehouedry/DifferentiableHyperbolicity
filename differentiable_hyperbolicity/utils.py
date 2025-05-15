@@ -1,20 +1,21 @@
 import torch
 
+
 def logsumexp(x: torch.Tensor, dim: int) -> torch.Tensor:
     # Tricks here: log(sum(exp(x))) = log(sum(exp(x - m)*exp(m))) = log(exp(m)*sum(exp(x - m))) = m + log(sum(exp(x - m)))
     m, _ = x.max(dim=dim)
-    mask = m == -float('inf')
+    mask = m == -float("inf")
     s = (x - m.masked_fill_(mask, 0).unsqueeze(dim=dim)).exp().sum(dim=dim)
 
-    return s.masked_fill_(mask, 1).log() + m.masked_fill_(mask, -float('inf'))
+    return s.masked_fill_(mask, 1).log() + m.masked_fill_(mask, -float("inf"))
 
 
-def soft_max(points: torch.Tensor,  scale: float, dim=-1) -> torch.Tensor:
+def soft_max(points: torch.Tensor, scale: float, dim=-1) -> torch.Tensor:
     """
     Computes the log-sum-exp with a scaling factor.
     """
 
-    return (1/scale) * torch.logsumexp(scale * points, dim=dim)
+    return (1 / scale) * torch.logsumexp(scale * points, dim=dim)
 
 
 def make_batches(M, size_batches=10, nb_batches=1):
@@ -63,22 +64,27 @@ def datasp(weights: torch.Tensor, num_nodes, edges, beta: float = 1.0) -> torch.
     return weighted_matrix
 
 
-def construct_weighted_matrix(weights: torch.Tensor, num_nodes: int, edges: torch.Tensor) -> torch.Tensor:
+def construct_weighted_matrix(
+    weights: torch.Tensor, num_nodes: int, edges: torch.Tensor
+) -> torch.Tensor:
     """
     Constructs a weighted adjacency matrix from given edge weights.
     """
-    weighted_matrix = torch.full((num_nodes, num_nodes), float(0)).to(device=weights.device)
+    weighted_matrix = torch.full((num_nodes, num_nodes), float(0)).to(
+        device=weights.device
+    )
     weighted_matrix[edges[0, :], edges[1, :]] = weights
-    weighted_matrix = weighted_matrix+weighted_matrix.t()
+    weighted_matrix = weighted_matrix + weighted_matrix.t()
 
     return weighted_matrix
+
 
 def floyd_warshall(adj_matrix):
     """
     Implements the Floyd-Warshall algorithm to compute the shortest paths between all pairs of nodes in a graph.
 
     Parameters:
-        adj_matrix (torch.Tensor): A (N x N) adjacency matrix representing the graph. 
+        adj_matrix (torch.Tensor): A (N x N) adjacency matrix representing the graph.
                                    The value at (i, j) represents the weight of the edge from node i to node j.
                                    Use float('inf') for no direct edge between nodes.
 

@@ -1,7 +1,8 @@
-import numpy as np
-from scipy.spatial import distance as ssd
-from scipy.cluster.hierarchy import linkage
 import networkx as nx
+import numpy as np
+from scipy.cluster.hierarchy import linkage
+from scipy.spatial import distance as ssd
+
 
 def linkage_to_distance_matrix(Z):
     """
@@ -19,6 +20,7 @@ def linkage_to_distance_matrix(Z):
         clusters.append(clusters[j] + clusters[k])
     return D
 
+
 def gromov_tree(distance_matrix, root):
     """
     Computes a Gromov-style distance matrix from a given root using a hierarchical clustering
@@ -35,13 +37,17 @@ def gromov_tree(distance_matrix, root):
     d_root = distance_matrix[root]
     d_max = d_root.max()
 
-    gp = np.tile(d_root, (n, 1)) + np.tile(d_root.reshape(n, 1), (1, n)) - distance_matrix
-    gp = gp/2.0
+    gp = (
+        np.tile(d_root, (n, 1))
+        + np.tile(d_root.reshape(n, 1), (1, n))
+        - distance_matrix
+    )
+    gp = gp / 2.0
 
     d_U = d_max - gp
     np.fill_diagonal(d_U, 0)
 
-    Z = linkage(ssd.squareform(d_U), method='single')
+    Z = linkage(ssd.squareform(d_U), method="single")
     D_gromov = linkage_to_distance_matrix(Z)
 
     gp_T = d_max - D_gromov
@@ -49,6 +55,7 @@ def gromov_tree(distance_matrix, root):
     np.fill_diagonal(d_T, 0)
 
     return d_T
+
 
 def buneman_extraction_aux(
     tree: nx.Graph,

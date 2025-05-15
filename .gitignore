@@ -9,21 +9,7 @@ hyperbolicity.egg-info/
 # Ignore all .DS_Store files
 *.DS_Store
 
-# Ignore all results, figures, launch files, and datasets
-hyperbolicity/expes/results_expes/
-hyperbolicity/expes/figures/
-hyperbolicity/expes/launch_files/
-hyperbolicity/datasets/*
-!hyperbolicity/datasets/D_celegan.pkl
-!hyperbolicity/datasets/D_csphd.pkl
-# Ignore specific notebooks and scripts
-hyperbolicity/expes/figures/figure_Tree_fiitingGW.ipynb
-hyperbolicity/expes/classification.ipynb
-hyperbolicity/expes/single_cell_classification.ipynb
-hyperbolicity/expes/single_cell.ipynb
-hyperbolicity/tree_fitting_methods/hyperbolicity_learning_GW.py
-hyperbolicity/expes/figures/figure_paper.ipynb
-hyperbolicity/expes/figures/sensibility_analysis_bs_plot.tex
-hyperbolicity/expes/figures/sensibility_analysis_sd_plot.tex
-hyperbolicity/expes/figures/sensibility_analysis_rd_plot.tex
-hyperbolicity/expes/loss_curves.ipynb
+*.ipynb
+*.pkl
+*.tex
+results_expes/

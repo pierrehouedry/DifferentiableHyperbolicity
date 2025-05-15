@@ -1,6 +1,6 @@
-from tqdm import tqdm
 import torch
-from hyperbolicity.utils import soft_max
+
+from differentiable_hyperbolicity.utils import soft_max
 
 
 def compute_hyperbolicity(M, scale=0):
@@ -30,9 +30,11 @@ def compute_hyperbolicity(M, scale=0):
         return soft_max(delta, scale, dim=(0, 1, 2, 3))
     else:
         return torch.max(delta)
-    
 
-def compute_delta_from_distances_batched(dist_matrices: torch.Tensor, scale: float) -> torch.Tensor:         
+
+def compute_delta_from_distances_batched(
+    dist_matrices: torch.Tensor, scale: float
+) -> torch.Tensor:
     """
     Batched variant of ‘delta_from_distances’.
 
@@ -57,7 +59,7 @@ def compute_delta_from_distances_batched(dist_matrices: torch.Tensor, scale: flo
     # Pre-compute the quadruple index grid *once* and broadcast across the batch
     #   idx.shape = (4, N⁴)
     idx = torch.cartesian_prod(*(torch.arange(N, device=device) for _ in range(4))).T
-    i_idx, j_idx, k_idx, l_idx = idx             # (N⁴,)
+    i_idx, j_idx, k_idx, l_idx = idx  # (N⁴,)
 
     # Gather all pairwise distances needed for the three Gromov products.
     # Each gather creates a tensor of shape (B, N⁴)
@@ -68,19 +70,19 @@ def compute_delta_from_distances_batched(dist_matrices: torch.Tensor, scale: flo
     d_jk = dist_matrices[:, j_idx, k_idx]
     d_ik = dist_matrices[:, i_idx, k_idx]
 
-    gp_01_3 = (d_il + d_jl - d_ij) / 2           # (B, N⁴)
+    gp_01_3 = (d_il + d_jl - d_ij) / 2  # (B, N⁴)
     gp_12_3 = (d_jl + d_kl - d_jk) / 2
     gp_02_3 = (d_il + d_kl - d_ik) / 2
 
     # Soft-min over {gp_01_3, gp_12_3}
-    minimum   = torch.stack((gp_01_3, gp_12_3), dim=-1)      # (B, N⁴, 2)
-    soft_min  = soft_max(minimum, -scale)           # (B, N⁴)
+    minimum = torch.stack((gp_01_3, gp_12_3), dim=-1)  # (B, N⁴, 2)
+    soft_min = soft_max(minimum, -scale)  # (B, N⁴)
 
     # Δ₍i,j,k,l₎  =  soft-min(gp_01_3, gp_12_3)  −  gp_02_3
-    delta_ijkl = soft_min - gp_02_3                           # (B, N⁴)
+    delta_ijkl = soft_min - gp_02_3  # (B, N⁴)
 
     # Finally take the soft-max (log-sum-exp) over all quadruples
-    delta = soft_max(delta_ijkl,  scale, dim=-1)     # (B,)
+    delta = soft_max(delta_ijkl, scale, dim=-1)  # (B,)
 
     return delta
 
@@ -131,16 +133,18 @@ def compute_exact_hyperbolicity_naive(metric, scale=0):
     for i in range(N):
         for j in range(N):
             for k in range(N):
-                for l in range(N):
+                for l in range(N):  # noqa: E741
                     S1 = metric[i, j] + metric[k, l]
                     S2 = metric[i, k] + metric[j, l]
                     S3 = metric[i, l] + metric[j, k]
                     Stot = torch.stack([S1, S2, S3], dim=-1)
                     Stot = Stot.sort(descending=True)[0]
                     if scale != 0:
-                        maxi = soft_max(torch.tensor([maxi, (Stot[0] - Stot[1]) / 2]), scale)
+                        maxi = soft_max(
+                            torch.tensor([maxi, (Stot[0] - Stot[1]) / 2]), scale
+                        )
                     else:
-                        maxi = torch.max(maxi, (Stot[0]-Stot[1])/2)
+                        maxi = torch.max(maxi, (Stot[0] - Stot[1]) / 2)
     return maxi
 
 
@@ -218,9 +222,17 @@ def delta_hyperbolicity_fixed_basepoint(metric, base_point, alpha, soft=True):
         torch.Tensor: Scalar value representing the smoothed hyperbolicity estimate.
     """
     row = metric[base_point, :]
-    XX_p = 0.5 * (row.unsqueeze(0) + row.unsqueeze(1) - metric)  # could be optimized if base_point is 0
+    XX_p = 0.5 * (
+        row.unsqueeze(0) + row.unsqueeze(1) - metric
+    )  # could be optimized if base_point is 0
 
-    return torch.logsumexp(alpha*(torch.min(XX_p[:, :, None], XX_p[None, :, :])-XX_p[:, None, :]), dim=(0, 1, 2))/alpha
+    return (
+        torch.logsumexp(
+            alpha * (torch.min(XX_p[:, :, None], XX_p[None, :, :]) - XX_p[:, None, :]),
+            dim=(0, 1, 2),
+        )
+        / alpha
+    )
 
 
 def delta_hyperbolicity_fixed_basepoint2(metric, base_point, alpha, soft=True):
@@ -240,7 +252,7 @@ def delta_hyperbolicity_fixed_basepoint2(metric, base_point, alpha, soft=True):
     N = metric.size(0)
     XX_p = 0.5 * (row.unsqueeze(0) + row.unsqueeze(1) - metric)
 
-    max_logsumexp = -float('inf')
+    max_logsumexp = -float("inf")
 
     for i in range(N):
         XX_p_i = XX_p[i, :]

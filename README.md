@@ -15,7 +15,7 @@ pip install -e .
 - Multiple tree fitting algorithms:
   - Neighbor Joining (NJ)
   - TreeRep
-  - HCC (Hierarchical Clustering)
+  - HCCRootedTreeFit 
   - Gromov Tree Construction
   - Layering Tree Approximation
   - DeltaZero (our differentiable method)
@@ -46,7 +46,7 @@ tree_nj = NJ(distances)
 tree_TR = TreeRep(distances)
 tree_TR.learn_tree()
 
-# HDTree (our differentiable method)
+# DeltaZero(our differentiable method)
 opt_tree = deltazero_tree(torch.tensor(distances),
                   root=0, 
                   lr=0.1,

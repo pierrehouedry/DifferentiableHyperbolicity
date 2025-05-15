@@ -1,8 +1,9 @@
-import numpy as np
-import networkx as nx
 from collections import defaultdict
 
-#Inspired by: Additive Spanners and Distance and Routing Labeling Schemes for Hyperbolic Graphs by Victor Chepoi, Feodor F. Dragan2, Bertrand Estellon, Michel Habib, Yann Vaxes, and Yang Xiang
+import networkx as nx
+
+# Inspired by: Additive Spanners and Distance and Routing Labeling Schemes for Hyperbolic Graphs by Victor Chepoi, Feodor F. Dragan2, Bertrand Estellon, Michel Habib, Yann Vaxes, and Yang Xiang
+
 
 def layering(graph, source):
     dist = nx.floyd_warshall_numpy(graph)
@@ -11,6 +12,7 @@ def layering(graph, source):
         d = dist[source][node]
         layers[d].append(node)
     return layers
+
 
 def layering_partition(graph, source):
     layers = layering(graph, source)
@@ -27,13 +29,13 @@ def layering_partition(graph, source):
         partition[d] = clusters
     return partition
 
-def layering_approx_tree(graph, source):
 
+def layering_approx_tree(graph, source):
     partition = layering_partition(graph, source)
     T = nx.Graph()
     T.add_nodes_from(graph.nodes())
     layers_sorted = sorted(partition.keys())
-    
+
     for d in layers_sorted:
         if d == 0:
             continue
@@ -51,7 +53,7 @@ def layering_approx_tree(graph, source):
                 if rep is not None:
                     break
             if rep is None:
-                rep = source 
+                rep = source
             for u in cluster:
                 T.add_edge(rep, u)
     return T

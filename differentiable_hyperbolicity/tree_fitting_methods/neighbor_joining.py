@@ -1,8 +1,6 @@
-import numpy as np
 import networkx as nx
+import numpy as np
 
-import numpy as np
-import networkx as nx
 
 def NJ(distance_matrix):
     """
@@ -21,7 +19,7 @@ def NJ(distance_matrix):
         nodes are internal nodes created during joining. Edges have a
         'weight' attribute for branch lengths.
     """
-    
+
     D = np.array(distance_matrix, dtype=float)
     n = D.shape[0]
 
@@ -58,7 +56,7 @@ def NJ(distance_matrix):
             D = np.delete(D, idx, axis=0)
             D = np.delete(D, idx, axis=1)
 
-        v_i, v_j = vertices[i], vertices[j]
+        v_i, v_j = vertices[i], vertices[j]  # noqa: F841
         vertices.pop(max(i, j))
         vertices.pop(min(i, j))
         vertices.append(u)
@@ -70,5 +68,3 @@ def NJ(distance_matrix):
     tree.add_edge(v1, v2, weight=D[0, 1])
 
     return tree
-
-

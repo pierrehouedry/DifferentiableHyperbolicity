@@ -26,7 +26,7 @@ dataset = args.dataset
 num_expe = args.num_expe
 methods = args.methods
 #load the distances
-dataset_path = f'/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/D_{dataset}.pkl'
+dataset_path = f'./datasets/D_{dataset}.pkl'
 
 with open(dataset_path, 'rb') as f:
     distances = pickle.load(f)
@@ -35,7 +35,7 @@ with open(dataset_path, 'rb') as f:
 #load the graph
 if dataset == 'wiki':
     wiki_dataset = AttributedGraphDataset(
-        '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/wiki', name='Wiki')
+        './hyperbolicity/datasets/wiki', name='Wiki')
     data = wiki_dataset[0]
     G_data = to_networkx(data, to_undirected=True)
     largest_cc_data = max(nx.connected_components(G_data), key=len)
@@ -45,7 +45,7 @@ if dataset == 'wiki':
     G_largest_cc = nx.relabel_nodes(G_largest_cc, mapping)
 
 if dataset == 'airport':
-    airport = pickle.load(open('/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/airport/airport.p', 'rb'))
+    airport = pickle.load(open('./hyperbolicity/datasets/airport/airport.p', 'rb'))
     # For Airport, we need to do this
     li = [airport.subgraph(c) for c in nx.connected_components(airport)]
     G_largest_cc = nx.Graph(li[0])
@@ -56,7 +56,7 @@ if dataset == 'airport':
 
 if dataset == 'celegan':
     # Load the bio-celegans dataset
-    celegans_path = '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/bio-celegans.csv'
+    celegans_path = './hyperbolicity/datasets/bio-celegans.csv'
     df = pd.read_csv(celegans_path)
     G_celegans = nx.from_pandas_edgelist(df, source='id1', target='id2')
     largest_cc_celegans = max(nx.connected_components(G_celegans), key=len)
@@ -65,7 +65,7 @@ if dataset == 'celegan':
     G_largest_cc = nx.relabel_nodes(G_largest_cc, mapping)
 
 if dataset == 'csphd':
-    csphd_path = '/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/ca-CSphd.csv'
+    csphd_path = './hyperbolicity/datasets/ca-CSphd.csv'
     df = pd.read_csv(csphd_path)
     G_csphd = nx.from_pandas_edgelist(df, source='id1', target='id2')
     largest_cc_csphd = max(nx.connected_components(G_csphd), key=len)
@@ -75,7 +75,7 @@ if dataset == 'csphd':
 
 if dataset == 'cora':
     cora_dataset = Planetoid(
-        root='/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/datasets/cora', name='Cora')
+        root='./hyperbolicity/datasets/cora', name='Cora')
     data = cora_dataset[0]
     G_data = to_networkx(data, to_undirected=True)
     largest_cc_data = max(nx.connected_components(G_data), key=len)
@@ -108,7 +108,7 @@ if 'hcc' in methods:
     std_distortion = np.std(distortion)
 
     # Save HCC Linkage Results
-    with open(f'/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/expes/results_expes/benchmark_{dataset}.txt', 'a') as result_file:
+    with open(f'./hyperbolicity/expes/results_expes/benchmark_{dataset}.txt', 'a') as result_file:
         result_file.write('== HCC Linkage Results ==\n')
         result_file.write(f"Average L1: {avg_l1:.4f} ± {std_l1:.4f}\n")
         result_file.write(f"Average Distortion: {avg_distortion:.4f} ± {std_distortion:.4f}\n")
@@ -133,7 +133,7 @@ if 'gromov' in methods:
     std_distortion = np.std(distortion)
 
     # Save Gromov Tree Results
-    with open(f'/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/expes/results_expes/benchmark_{dataset}.txt', 'a') as result_file:
+    with open(f'./hyperbolicity/expes/results_expes/benchmark_{dataset}.txt', 'a') as result_file:
         result_file.write('== GROMOV TREE RESULTS ==\n')
         result_file.write(f"Average L1: {avg_l1:.4f} ± {std_l1:.4f}\n")
         result_file.write(f"Average Distortion: {avg_distortion:.4f} ± {std_distortion:.4f}\n")
@@ -165,7 +165,7 @@ if 'treerep' in methods:
     std_distortion = np.std(distortion)
 
     # Save TreeRep Results
-    with open(f'/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/expes/results_expes/benchmark_{dataset}.txt', 'a') as result_file:
+    with open(f'./hyperbolicity/expes/results_expes/benchmark_{dataset}.txt', 'a') as result_file:
         result_file.write('== TREEREP RESULTS ==\n')
         result_file.write(f"Average L1: {avg_l1:.4f} ± {std_l1:.4f}\n")
         result_file.write(f"Average Distortion: {avg_distortion:.4f} ± {std_distortion:.4f}\n")
@@ -193,7 +193,7 @@ if 'layering' in methods and dataset not in ['zeisel', 'cbmc', 'microbiote']:
     std_distortion = np.std(distortion)
 
     # Save Layering Tree Results
-    with open(f'/share/home/houedry/projects/DifferentiableHyperbolicity/hyperbolicity/expes/results_expes/benchmark_{dataset}.txt', 'a') as result_file:
+    with open(f'./hyperbolicity/expes/results_expes/benchmark_{dataset}.txt', 'a') as result_file:
         result_file.write('== LAYERING TREE RESULTS ==\n')
         result_file.write(f"Average L1: {avg_l1:.4f} ± {std_l1:.4f}\n")
         result_file.write(f"Average Distortion: {avg_distortion:.4f} ± {std_distortion:.4f}\n")
