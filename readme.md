@@ -18,7 +18,7 @@ pip install -e .
   - HCC (Hierarchical Clustering)
   - Gromov Tree Construction
   - Layering Tree Approximation
-  - HDTree (our differentiable method)
+  - DeltaZero (our differentiable method)
 
 - Graph analysis tools:
   - Hyperbolicity computation
@@ -31,7 +31,7 @@ pip install -e .
 import numpy as np
 import networkx as nx
 from hyperbolicity.tree_fitting_methods.neighbor_joining import NJ
-from hyperbolicity.tree_fitting_methods.hdtree import hdtree
+from hyperbolicity.tree_fitting_methods.deltazero import deltazero_tree
 from hyperbolicity.tree_fitting_methods.treerep import TreeRep
 
 # Create a distance matrix from your graph
@@ -47,7 +47,7 @@ tree_TR = TreeRep(distances)
 tree_TR.learn_tree()
 
 # HDTree (our differentiable method)
-opt_tree = hdtree(torch.tensor(distances),
+opt_tree = deltazero_tree(torch.tensor(distances),
                   root=0, 
                   lr=0.1,
                   scale_delta=1e-2, 

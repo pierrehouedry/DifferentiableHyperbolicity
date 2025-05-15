@@ -3,7 +3,7 @@ from hyperbolicity.tree_fitting_methods.gromov import gromov_tree
 from hyperbolicity.utils import construct_weighted_matrix
 from hyperbolicity.tree_fitting_methods.hyperbolicity_learning import train_distance_matrix
 
-def hdtree(distances: torch.Tensor, 
+def deltazero_tree(distances: torch.Tensor, 
            root: int, 
            lr: float, 
            n_batches: int, 
