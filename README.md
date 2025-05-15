@@ -15,7 +15,7 @@ pip install -e .
 - Multiple tree fitting algorithms:
   - Neighbor Joining (NJ)
   - TreeRep
-  - HCCRootedTreeFit 
+  - HCCRootedTreeFit
   - Gromov Tree Construction
   - Layering Tree Approximation
   - DeltaZero (our differentiable method)
@@ -48,12 +48,12 @@ tree_TR.learn_tree()
 
 # DeltaZero(our differentiable method)
 opt_tree = deltazero_tree(torch.tensor(distances),
-                  root=0, 
+                  root=0,
                   lr=0.1,
-                  scale_delta=1e-2, 
-                  distance_reg=1, 
+                  scale_delta=1e-2,
+                  distance_reg=1,
                   batch_size=10,
-                  n_batches=1, 
+                  n_batches=1,
                   num_epochs=2000)
 ```
 
@@ -63,7 +63,6 @@ opt_tree = deltazero_tree(torch.tensor(distances),
 .
 ├── differentiable_hyperbolicity/
 │   ├── delta.py            # Hyperbolicity computation
-│   ├── far_apart_points.py # Point selection algorithms
 │   ├── utils.py            # Utility functions
 │   ├── tree_fitting_methods/ # Different tree fitting implementations
 └── expes/                  # Experiments and analysis notebooks
