@@ -13,3 +13,4 @@ hyperbolicity.egg-info/
 *.pkl
 *.tex
 results_expes/
+datasets/
