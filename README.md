@@ -30,9 +30,9 @@ pip install -e .
 ```python
 import numpy as np
 import networkx as nx
-from hyperbolicity.tree_fitting_methods.neighbor_joining import NJ
-from hyperbolicity.tree_fitting_methods.deltazero import deltazero_tree
-from hyperbolicity.tree_fitting_methods.treerep import TreeRep
+from differentiable_hyperbolicity.tree_fitting_methods.neighbor_joining import NJ
+from differentiable_hyperbolicity.tree_fitting_methods.deltazero import deltazero_tree
+from differentiable_hyperbolicity.tree_fitting_methods.treerep import TreeRep
 
 # Create a distance matrix from your graph
 graph = nx.random_geometric_graph(10, 0.5)
@@ -61,7 +61,7 @@ opt_tree = deltazero_tree(torch.tensor(distances),
 
 ```
 .
-├── hyperbolicity/
+├── differentiable_hyperbolicity/
 │   ├── delta.py            # Hyperbolicity computation
 │   ├── far_apart_points.py # Point selection algorithms
 │   ├── utils.py            # Utility functions
