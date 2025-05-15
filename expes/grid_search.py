@@ -1,19 +1,23 @@
 import argparse
-import yaml
-from tabulate import tabulate
-from hyperbolicity.tree_fitting_methods.hyperbolicity_learning import train_distance_matrix
-from dataclasses import dataclass, field, fields
-from hyperbolicity.utils import construct_weighted_matrix
-from hyperbolicity.tree_fitting_methods.gromov import gromov_tree
-from typing import List, Any
-import pickle
-import torch
-import time
 import datetime
 import os
+import pickle
+from dataclasses import dataclass, fields
 from pathlib import Path
+from typing import List
+
 import numpy as np
+import torch
+import yaml
+from tabulate import tabulate
 from tqdm import tqdm
+
+from differentiable_hyperbolicity.tree_fitting_methods.gromov import gromov_tree
+from differentiable_hyperbolicity.tree_fitting_methods.hyperbolicity_learning import (
+    train_distance_matrix,
+)
+from differentiable_hyperbolicity.utils import construct_weighted_matrix
+
 
 @dataclass
 class GridSearchConfig:
@@ -54,7 +58,7 @@ def main(config: GridSearchConfig):
 
     # Load dataset
     try:
-        with open(config.dataset, 'rb') as f:
+        with open(config.dataset, "rb") as f:
             dataset = pickle.load(f)
     except FileNotFoundError:
         print(f"Error: Dataset file not found at {config.dataset}")
@@ -70,17 +74,17 @@ def main(config: GridSearchConfig):
     # Convert dataset to torch float32
     distances = torch.tensor(dataset, dtype=torch.float64)
 
-    
     """ new_row = torch.full((1, distances.shape[1]), 20)
     distances = torch.cat((distances, new_row), dim=0)
     new_column = torch.full((distances.shape[0], 1), 20)
     distances = torch.cat((distances, new_column), dim=1)
     distances[-1,-1] = 0 """
 
-
     # Generate the folder name once based on a timestamp
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    folder_name = f"results_expes/{config.dataset.split('/')[-1].split('.')[0]}_{timestamp}/"
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    folder_name = (
+        f"results_expes/{config.dataset.split('/')[-1].split('.')[0]}_{timestamp}/"
+    )
 
     # Create the folder if it doesn't exist
     if not os.path.exists(folder_name):
@@ -92,8 +96,10 @@ def main(config: GridSearchConfig):
     # Create results.csv if it doesn't exist
     results_file = os.path.join(folder_name, "results.csv")
     if not os.path.exists(results_file):
-        with open(results_file, 'w') as f:
-            f.write("learning_rate, distance_reg, scale_delta,epochs, batch_size,n_batches, intermediate_distortion, intermediate_l1, mean_optim_l1, min_optim_l1, std_optim_l1, mean_optim_distortion, min_optim_distortion, std_optim_distortion, epochs_reached\n")
+        with open(results_file, "w") as f:
+            f.write(
+                "learning_rate, distance_reg, scale_delta,epochs, batch_size,n_batches, intermediate_distortion, intermediate_l1, mean_optim_l1, min_optim_l1, std_optim_l1, mean_optim_distortion, min_optim_distortion, std_optim_distortion, epochs_reached\n"
+            )
     else:
         print(f"Results file already exists at {results_file}. Appending results.")
 
@@ -107,11 +113,17 @@ def main(config: GridSearchConfig):
         for batch in config.batch_size
     ]
     print(f"Total combinations: {len(hyperparameter_combinations)}")
-    pbar = tqdm(total=len(hyperparameter_combinations), desc="Grid Search Progress", unit="combination")
+    pbar = tqdm(
+        total=len(hyperparameter_combinations),
+        desc="Grid Search Progress",
+        unit="combination",
+    )
     pbar.set_postfix_str("Starting...")
     for i, (lr, dr, sd, epoch, batch) in enumerate(hyperparameter_combinations):
-        pbar.set_postfix_str(f"LR={lr}, DR={dr}, SD={sd}, Epochs={epoch}, Batch Size={batch}")
-    
+        pbar.set_postfix_str(
+            f"LR={lr}, DR={dr}, SD={sd}, Epochs={epoch}, Batch Size={batch}"
+        )
+
         # Call the training function with the current combination
         best_weights, losses, deltas, errors, duration = train_distance_matrix(
             distances,
@@ -128,11 +140,11 @@ def main(config: GridSearchConfig):
         # Save state dict
         if not torch.isnan(best_weights).any():
             state_dict = {
-            "weights": best_weights,
-            "losses": losses,
-            "deltas": deltas,
-            "errors": errors,
-            "duration": duration,
+                "weights": best_weights,
+                "losses": losses,
+                "deltas": deltas,
+                "errors": errors,
+                "duration": duration,
             }
 
             # Save state dict
@@ -141,13 +153,19 @@ def main(config: GridSearchConfig):
 
             # Compute scores
             num_nodes = distances.shape[0]
-            denom = num_nodes*(num_nodes-1)
+            denom = num_nodes * (num_nodes - 1)
             np.random.seed(42)
             indices = np.random.choice(num_nodes, 100, replace=False)
             edges = torch.triu_indices(num_nodes, num_nodes, offset=1)
-            distance_optimized = construct_weighted_matrix(best_weights, num_nodes, edges)
-            intermediate_distortion = torch.abs(distance_optimized - distances).max().item()
-            intermediate_l1 = (torch.abs(distance_optimized - distances).sum()/denom).item()
+            distance_optimized = construct_weighted_matrix(
+                best_weights, num_nodes, edges
+            )
+            intermediate_distortion = (
+                torch.abs(distance_optimized - distances).max().item()
+            )
+            intermediate_l1 = (
+                torch.abs(distance_optimized - distances).sum() / denom
+            ).item()
             optim_l1 = []
             optim_distortion = []
             distance_optimized_cpu = distance_optimized.cpu().numpy()
@@ -155,14 +173,18 @@ def main(config: GridSearchConfig):
             for j in indices:
                 T_opt = gromov_tree(distance_optimized_cpu, j)
                 optim_distortion.append(np.abs(T_opt - distances_cpu).max())
-                optim_l1.append(np.abs(T_opt - distances_cpu).sum()/denom)
+                optim_l1.append(np.abs(T_opt - distances_cpu).sum() / denom)
 
             # Append results to csv
-            with open(results_file, 'a') as f:
-                f.write(f"{lr},{dr},{sd},{epoch},{batch[0]},{batch[1]},{intermediate_distortion},{intermediate_l1},{np.mean(optim_l1)},{np.min(optim_l1)},{np.std(optim_l1)},{np.mean(optim_distortion)},{np.min(optim_distortion)},{np.std(optim_distortion)},{len(losses)}\n")
+            with open(results_file, "a") as f:
+                f.write(
+                    f"{lr},{dr},{sd},{epoch},{batch[0]},{batch[1]},{intermediate_distortion},{intermediate_l1},{np.mean(optim_l1)},{np.min(optim_l1)},{np.std(optim_l1)},{np.mean(optim_distortion)},{np.min(optim_distortion)},{np.std(optim_distortion)},{len(losses)}\n"
+                )
         else:
-            with open(results_file, 'a') as f:
-                f.write(f"{lr},{dr},{sd},{epoch},{batch[0]},{batch[1]},nan,nan,nan,nan,nan,nan,nan,nan,{len(losses)}\n")
+            with open(results_file, "a") as f:
+                f.write(
+                    f"{lr},{dr},{sd},{epoch},{batch[0]},{batch[1]},nan,nan,nan,nan,nan,nan,nan,nan,{len(losses)}\n"
+                )
         pbar.update(1)
         pbar.close()
 
@@ -170,24 +192,26 @@ def main(config: GridSearchConfig):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run grid search based on a config file.")
+    parser = argparse.ArgumentParser(
+        description="Run grid search based on a config file."
+    )
     parser.add_argument(
         "--config-path",
         type=str,
-        default="../configs/grid_search.yaml",
+        default="./expes/configs/grid_search.yaml",
         help="Path to the YAML configuration file.",
     )
     parser.add_argument(
-        '--dataset-path',
+        "--dataset-path",
         type=str,
-        default="../datasets/D_celegan.pkl",
+        default="./datasets/D_celegan.pkl",
     )
 
     args = parser.parse_args()
 
     config_dict = None
     try:
-        with open(args.config_path, 'r') as f:
+        with open(args.config_path, "r") as f:
             config_dict = yaml.safe_load(f)
     except FileNotFoundError:
         print(f"Error: Config file not found at {args.config_path}")
@@ -215,6 +239,8 @@ if __name__ == "__main__":
     except ValueError as e:
         print(f"Error validating configuration: {e}")
         exit(1)
-    except Exception as e: # Catch other potential errors during validation/instantiation
+    except (
+        Exception
+    ) as e:  # Catch other potential errors during validation/instantiation
         print(f"An unexpected error occurred during configuration processing: {e}")
         exit(1)
