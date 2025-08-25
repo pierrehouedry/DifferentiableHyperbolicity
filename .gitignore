@@ -17,3 +17,7 @@ datasets/
 expes/tests/
 expes/best_scores
 expes/compute_hyperbolicity.py
+
+expes/figures/*
+!expes/figures/delta_approximation.py
+!expes/figures/figure_paper_final.ipynb
