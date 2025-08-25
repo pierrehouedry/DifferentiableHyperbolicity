@@ -18,6 +18,10 @@ expes/tests/
 expes/best_scores
 expes/compute_hyperbolicity.py
 
+# Ignore everything under expes/figures, but allow two specific files
 expes/figures/*
 !expes/figures/delta_approximation.py
 !expes/figures/figure_paper_final.ipynb
+
+# Ignore the .gitignore file itself (note: Git will only stop tracking it after you run git rm --cached)
+.gitignore
