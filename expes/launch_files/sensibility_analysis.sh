@@ -8,7 +8,7 @@
 eval "$(conda shell.bash hook)" || source "$HOME/miniconda3/etc/profile.d/conda.sh" || true
 conda activate hyperenv_py311
 
-PROJECT_ROOT="/share/home/houedry/projects/DifferentiableHyperbolicity"
+PROJECT_ROOT="" #to be filled
 
 cd "$PROJECT_ROOT"
 

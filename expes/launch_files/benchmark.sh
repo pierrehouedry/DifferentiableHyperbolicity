@@ -9,7 +9,7 @@ eval "$(conda shell.bash hook)" || source "$HOME/miniconda3/etc/profile.d/conda.
 conda activate hyperenv_py311
 
 # Use an absolute project root because SLURM may run a copied script from /var/spool
-PROJECT_ROOT="/share/home/houedry/projects/DifferentiableHyperbolicity"
+PROJECT_ROOT="" #to be filled
 
 cd "$PROJECT_ROOT"
 
