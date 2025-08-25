@@ -56,6 +56,15 @@ def main(config: GridSearchConfig):
     print(f"Learning Rates: {config.learning_rates}")
     print(f"Distance Regs: {config.distance_regs}")
 
+    # Resolve dataset path: if relative, interpret relative to project root (parent of expes)
+    EXPES_DIR = Path(__file__).resolve().parent  # .../DifferentiableHyperbolicity/expes
+    PROJECT_ROOT = EXPES_DIR.parent
+
+    dataset_path = Path(config.dataset)
+    if not dataset_path.is_absolute():
+        dataset_path = PROJECT_ROOT / config.dataset
+    config.dataset = str(dataset_path)
+
     # Load dataset
     try:
         with open(config.dataset, "rb") as f:
@@ -71,34 +80,25 @@ def main(config: GridSearchConfig):
         exit(1)
     print(f"Dataset loaded successfully from {config.dataset}")
 
-    # Convert dataset to torch float32
-    distances = torch.tensor(dataset, dtype=torch.float64)
-
-    """ new_row = torch.full((1, distances.shape[1]), 20)
-    distances = torch.cat((distances, new_row), dim=0)
-    new_column = torch.full((distances.shape[0], 1), 20)
-    distances = torch.cat((distances, new_column), dim=1)
-    distances[-1,-1] = 0 """
-
-    # Generate the folder name once based on a timestamp
+    # Generate the folder name once based on a timestamp and place it under expes/results_expes
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    folder_name = (
-        f"results_expes/{config.dataset.split('/')[-1].split('.')[0]}_{timestamp}/"
-    )
+    dataset_stem = Path(config.dataset).stem
+    results_base = EXPES_DIR / "results_expes"
+    folder_path = results_base / f"{dataset_stem}_{timestamp}"
 
     # Create the folder if it doesn't exist
-    if not os.path.exists(folder_name):
-        Path(folder_name).mkdir(parents=True, exist_ok=True)
-        print(f"Created folder: {folder_name}")
+    if not folder_path.exists():
+        folder_path.mkdir(parents=True, exist_ok=True)
+        print(f"Created folder: {folder_path}")
     else:
-        print(f"Folder {folder_name} already exists. Reusing it.")
+        print(f"Folder {folder_path} already exists. Reusing it.")
 
     # Create results.csv if it doesn't exist
-    results_file = os.path.join(folder_name, "results.csv")
-    if not os.path.exists(results_file):
-        with open(results_file, "w") as f:
+    results_file = folder_path / "results.csv"
+    if not results_file.exists():
+        with results_file.open("w") as f:
             f.write(
-                "learning_rate, distance_reg, scale_delta,epochs, batch_size,n_batches, intermediate_distortion, intermediate_l1, mean_optim_l1, min_optim_l1, std_optim_l1, mean_optim_distortion, min_optim_distortion, std_optim_distortion, epochs_reached\n"
+                "learning_rate, distance_reg, scale_delta, epochs, batch_size, n_batches, intermediate_distortion, intermediate_l1, mean_optim_l1, min_optim_l1, std_optim_l1, mean_optim_distortion, min_optim_distortion, std_optim_distortion, epochs_reached\n"
             )
     else:
         print(f"Results file already exists at {results_file}. Appending results.")
@@ -148,8 +148,8 @@ def main(config: GridSearchConfig):
             }
 
             # Save state dict
-            file_name = f"{folder_name}lr_{lr}_dr_{dr}_sd_{sd}_epoch_{epoch}_batch_{batch[0]}_n_batches_{batch[1]}.pt"
-            torch.save(state_dict, file_name)
+            file_name = folder_path / f"lr_{lr}_dr_{dr}_sd_{sd}_epoch_{epoch}_batch_{batch[0]}_n_batches_{batch[1]}.pt"
+            torch.save(state_dict, str(file_name))
 
             # Compute scores
             num_nodes = distances.shape[0]

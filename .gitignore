@@ -14,3 +14,6 @@ hyperbolicity.egg-info/
 *.tex
 results_expes/
 datasets/
+expes/tests/
+expes/best_scores
+expes/compute_hyperbolicity.py

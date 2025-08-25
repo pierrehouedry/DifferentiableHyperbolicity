@@ -13,7 +13,6 @@ from differentiable_hyperbolicity.utils import (
     soft_max,
 )
 
-
 def train_distance_matrix(
     distances: torch.Tensor,
     scale_delta: float,
@@ -56,7 +55,7 @@ def train_distance_matrix(
             delta.backward(delta, retain_graph=True)
         err = (distances - update_dist).pow(2).mean()
         (distance_reg * err).backward()
-
+ 
         return delta + distance_reg * err, delta, err
 
     patience = 50
@@ -78,9 +77,10 @@ def train_distance_matrix(
             errors.append(err.item())
             # loss.backward()
             optimizer.step()
-            with torch.no_grad():
-                weights_opt.data[weights_opt.data < 0] = 0
-                weights_opt.data = projection(weights_opt, num_nodes, edges)
+            if epoch % 10 == 0:
+                with torch.no_grad():
+                    weights_opt.data[weights_opt.data < 0] = 0
+                    weights_opt.data = projection(weights_opt, num_nodes, edges)
             if loss.item() < best_loss:
                 best_loss = loss.item()
                 best_weights = weights_opt.detach().clone().cpu()
