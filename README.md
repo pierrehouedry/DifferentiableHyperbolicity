@@ -2,11 +2,14 @@
 
 Official implementation of the paper **“Bridging Arbitrary and Tree Metrics via Differentiable Gromov Hyperbolicity”** (accepted to NeurIPS 2025). The library provides differentiable estimators of Gromov hyperbolicity and several tree-metric fitting algorithms for graph data.
 
+## Paper
 
 - Paper: [Bridging Arbitrary and Tree Metrics via Differentiable Gromov Hyperbolicity](https://openreview.net/forum?id=rIudtwY0VM) (NeurIPS 2025). The code in this repository was used to produce the experiments in the paper.
 - If you build on this work, please cite the paper above.
 
-![Figure 1 from the paper](expes/figures/fig1.pdf)
+![Figure 1 from the paper](expes/figures/fig1.png)
+
+[High-resolution PDF](expes/figures/fig1.pdf)
 
 
 ## Installation
