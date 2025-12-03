@@ -79,6 +79,8 @@ def main(config: GridSearchConfig):
         print(f"An unexpected error occurred while loading the dataset: {e}")
         exit(1)
     print(f"Dataset loaded successfully from {config.dataset}")
+    
+    distances = torch.tensor(dataset, dtype=torch.float64)
 
     # Generate the folder name once based on a timestamp and place it under expes/results_expes
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
